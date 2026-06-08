@@ -151,6 +151,7 @@ function getMetrics() {
         totalRequests,
         totalBytes,
         currentRps,
+        currentBps,
         peakRps,
         gbps,
         peakGbps,
