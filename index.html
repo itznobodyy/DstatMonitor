@@ -319,12 +319,23 @@
         });
     }
 
+    // Detectar si el usuario está editando los inputs
+    const ipInput   = document.getElementById('ipInput');
+    const portInput = document.getElementById('portInput');
+    let userEditing = false;
+    ipInput.addEventListener('focus',   () => userEditing = true);
+    portInput.addEventListener('focus', () => userEditing = true);
+    ipInput.addEventListener('blur',    () => userEditing = false);
+    portInput.addEventListener('blur',  () => userEditing = false);
+
     function updateUI(data) {
-        // URL display
+        // URL display — solo actualizar inputs si el usuario NO está editando
         if (data.target) {
             document.getElementById('urlDisplay').textContent = `${data.target.ip}:${data.target.port}`;
-            document.getElementById('ipInput').value   = data.target.ip;
-            document.getElementById('portInput').value = data.target.port;
+            if (!userEditing) {
+                ipInput.value   = data.target.ip;
+                portInput.value = data.target.port;
+            }
         }
 
         // Status dot
