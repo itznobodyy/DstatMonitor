@@ -76,16 +76,19 @@ app.post('/api/target', (req, res) => {
     res.json({ ok: true, target });
 });
 
-// WebSocket — push métricas cada segundo, acepta target via mensaje
+// WebSocket — probe loop por cliente, se reinicia al cambiar target
 wss.on('connection', (ws) => {
-    // Cada cliente tiene su propio target y stats
     let clientTarget = { ip: target.ip, port: target.port };
     let clientStats = resetStats();
     let clientHistory = [];
+    let loopActive = false;
+    let loopId = 0; // para cancelar loop viejo
 
-    async function probeLoop() {
-        while (ws.readyState === WebSocket.OPEN) {
+    async function probeLoop(id) {
+        loopActive = true;
+        while (ws.readyState === WebSocket.OPEN && loopId === id) {
             const result = await probeTarget(clientTarget.ip, clientTarget.port);
+            if (loopId !== id) break; // target cambió, salir
             const now = Date.now();
 
             clientStats.totalProbes++;
@@ -110,12 +113,13 @@ wss.on('connection', (ws) => {
 
             if (clientHistory.length > 120) clientHistory.shift();
 
-            if (ws.readyState === WebSocket.OPEN) {
+            if (ws.readyState === WebSocket.OPEN && loopId === id) {
                 ws.send(JSON.stringify(buildMetrics(clientTarget, clientStats, clientHistory)));
             }
 
             await new Promise(r => setTimeout(r, 500));
         }
+        loopActive = false;
     }
 
     // Recibir nuevo target desde el cliente
@@ -123,15 +127,17 @@ wss.on('connection', (ws) => {
         try {
             const data = JSON.parse(msg);
             if (data.type === 'setTarget' && data.ip && data.port) {
-                clientTarget = { ip: data.ip, port: parseInt(data.port) };
+                clientTarget = { ip: data.ip.trim(), port: parseInt(data.port) };
                 clientStats = resetStats();
                 clientHistory = [];
+                loopId++; // invalida el loop anterior
+                probeLoop(loopId);
             }
         } catch(e) {}
     });
 
-    probeLoop();
-    ws.on('close', () => {});
+    probeLoop(loopId);
+    ws.on('close', () => { loopId = -1; });
 });
 
 function resetStats() {
