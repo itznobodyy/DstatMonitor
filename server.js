@@ -69,6 +69,6 @@ function formatTime(s) {
     return `${h}:${m}:${sec}`;
 }
 
-server.listen(PORT, () => {
-    console.log(`\n🚀 Servidor corriendo en: http://localhost:${PORT}\n`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 Servidor corriendo en: http://0.0.0.0:${PORT}\n`);
 });
