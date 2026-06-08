@@ -20,10 +20,17 @@ let metrics = {
 };
 
 let serverIp = '0.0.0.0';
+let publicPort = PORT;
 
-// Resolver IP real del servidor
-dns.lookup(os.hostname(), (err, addr) => {
-    if (!err) serverIp = addr;
+// Resolver IP pública real del servidor
+http.get('http://api.ipify.org', (res) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => { serverIp = data.trim(); });
+}).on('error', () => {
+    dns.lookup(os.hostname(), (err, addr) => {
+        if (!err) serverIp = addr;
+    });
 });
 
 
@@ -42,7 +49,7 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/api/metrics', (req, res) => res.json(getMetrics()));
 
 // API de info del servidor
-app.get('/api/info', (req, res) => res.json({ ip: serverIp, port: PORT }));
+app.get('/api/info', (req, res) => res.json({ ip: serverIp, port: 443 }));
 
 // WebSocket
 wss.on('connection', (ws) => {
