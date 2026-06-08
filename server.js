@@ -20,6 +20,8 @@ let metrics = {
     attacksDetected: 0
 };
 
+let lastRequestCount = 0;
+
 let serverIp = '0.0.0.0';
 
 // Resolver IP pública real del servidor
