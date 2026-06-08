@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-dim: #8b949e;
+            --green: #3fb950;
+            --red: #f85149;
+            --blue: #58a6ff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+
+        .server-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .server-box h2 { font-size: 14px; color: var(--text-dim); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .input-group { display: flex; gap: 12px; margin-bottom: 16px; }
+        
+        input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            flex: 1;
+        }
+        input:focus { outline: none; border-color: var(--blue); }
+
+        .btn {
+            background: var(--green);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .btn:hover { opacity: 0.9; }
+
+        .url-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 24px;
+            color: var(--blue);
+            text-align: center;
+            padding: 20px;
+            background: var(--bg);
+            border-radius: 8px;
+        }
+
+        .status-row { display: flex; gap: 12px; margin-top: 16px; }
+        .status {
+            flex: 1;
+            background: var(--bg);
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-dot.online { background: var(--green); }
+        .status-dot.offline { background: var(--red); }
+
+        .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        
+        .metric {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .metric-label { color: var(--text-dim); font-size: 14px; }
+        .metric.blue { border-top: 3px solid var(--blue); }
+        .metric.green { border-top: 3px solid var(--green); }
+        .metric.red { border-top: 3px solid var(--red); }
+
+        .log-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 24px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-box h3 { font-size: 14px; color: var(--text-dim); margin-bottom: 16px; }
+
+        .log-entry {
+            padding: 10px 14px;
+            background: var(--bg);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            border-left: 3px solid var(--green);
+        }
+        .log-entry.alert { border-left-color: var(--red); }
+        .log-time { color: var(--text-dim); float: right; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="server-box">
+            <h2>Servidor a Monitorear</h2>
+            <div class="input-group">
+                <input type="text" id="ipInput" placeholder="IP del servidor">
+                <input type="number" id="portInput" placeholder="Puerto">
+                <button class="btn" onclick="updateTarget()">Actualizar</button>
+            </div>
+            <div class="url-display" id="urlDisplay">Cargando...</div>
+            <div class="status-row">
+                <div class="status">
+                    <span class="status-dot online" id="connDot"></span>
+                    <span id="connStatus">Conectando...</span>
+                </div>
+                <div class="status">
+                    <span id="serverIp">IP: ---</span>
+                </div>
+                <div class="status">
+                    <span id="serverPort">Puerto: ---</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics">
+            <div class="metric blue">
+                <div class="metric-value" id="bandwidth">0.00 <span style="font-size:16px">Gbps</span></div>
+                <div class="metric-label">Ancho de Banda</div>
+            </div>
+            <div class="metric blue">
+                <div class="metric-value" id="rps">0 <span style="font-size:16px">req/s</span></div>
+                <div class="metric-label">Requests/seg</div>
+            </div>
+            <div class="metric green">
+                <div class="metric-value" id="uptime">00:00:00</div>
+                <div class="metric-label">Tiempo Activo</div>
+            </div>
+            <div class="metric red">
+                <div class="metric-value" id="attacks">0</div>
+                <div class="metric-label">Ataques Detectados</div>
+            </div>
+        </div>
+
+        <div class="log-box">
+            <h3>Registro en Tiempo Real</h3>
+            <div id="logEntries">
+                <div class="log-entry">Conectando al servidor...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let ip = window.location.hostname;
+        let port = window.location.port || 80;
+
+        document.getElementById('ipInput').value = ip;
+        document.getElementById('portInput').value = port;
+        
+        function updateTarget() {
+            ip = document.getElementById('ipInput').value || window.location.hostname;
+            port = document.getElementById('portInput').value || 80;
+            document.getElementById('urlDisplay').textContent = `${ip}:${port}`;
+            document.getElementById('serverIp').textContent = `IP: ${ip}`;
+            document.getElementById('serverPort').textContent = `Puerto: ${port}`;
+            addLog(`Objetivo actualizado: ${ip}:${port}`);
+        }
+
+        function addLog(msg, isAlert = false) {
+            const div = document.createElement('div');
+            div.className = 'log-entry' + (isAlert ? ' alert' : '');
+            div.innerHTML = `<span class="log-time">${new Date().toLocaleTimeString()}</span>${msg}`;
+            const container = document.getElementById('logEntries');
+            container.insertBefore(div, container.firstChild);
+            if (container.children.length > 20) container.removeChild(container.lastChild);
+        }
+
+        function connect() {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}`);
+
+            ws.onopen = () => {
+                document.getElementById('connDot').className = 'status-dot online';
+                document.getElementById('connStatus').textContent = 'Conectado';
+                document.getElementById('urlDisplay').textContent = `${ip}:${port}`;
+                document.getElementById('serverIp').textContent = `IP: ${ip}`;
+                document.getElementById('serverPort').textContent = `Puerto: ${port}`;
+                addLog('Conectado al servidor de monitoreo');
+            };
+
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                document.getElementById('bandwidth').innerHTML = (data.bandwidth || 0).toFixed(4) + ' <span style="font-size:16px">Gbps</span>';
+                document.getElementById('rps').innerHTML = (data.requestRate || 0).toLocaleString() + ' <span style="font-size:16px">req/s</span>';
+                document.getElementById('uptime').textContent = data.uptimeFormatted || '00:00:00';
+                document.getElementById('attacks').textContent = data.attacksDetected || 0;
+
+                if (data.requestRate > 100) addLog(`⚠️ Alto tráfico detectado: ${data.requestRate} req/s`, true);
+            };
+
+            ws.onclose = () => {
+                document.getElementById('connDot').className = 'status-dot offline';
+                document.getElementById('connStatus').textContent = 'Reconectando...';
+                setTimeout(connect, 3000);
+            };
+        }
+
+        connect();
+        updateTarget();
+    </script>
+</body>
+</html>
