@@ -31,13 +31,43 @@ const ipCount = new Map(); // ip -> count
 let peakRps = 0;
 let peakBps = 0;
 
-// IP pública del servidor
+// IP pública real — resolver el dominio de Railway
 let publicIp = '...';
-https.get('https://api.ipify.org', (res) => {
-    let d = '';
-    res.on('data', c => d += c);
-    res.on('end', () => { publicIp = d.trim(); });
-}).on('error', () => { publicIp = 'railway.app'; });
+
+function resolvePublicIp() {
+    // Primero intentar con el dominio de Railway
+    const railwayHost = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL || null;
+    if (railwayHost) {
+        const dns = require('dns');
+        const hostname = railwayHost.replace(/^https?:\/\//, '').split('/')[0];
+        dns.lookup(hostname, (err, addr) => {
+            if (!err && addr) { publicIp = addr; return; }
+            fallbackIp();
+        });
+    } else {
+        fallbackIp();
+    }
+}
+
+function fallbackIp() {
+    // Usar whatismyipaddress o similar que devuelve la IP de salida real
+    https.get('https://api64.ipify.org', (res) => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => { publicIp = d.trim(); });
+    }).on('error', () => {
+        // Último fallback: resolver propio hostname
+        const dns = require('dns');
+        const os = require('os');
+        dns.lookup(os.hostname(), (err, addr) => {
+            if (!err) publicIp = addr;
+        });
+    });
+}
+
+resolvePublicIp();
+// Re-resolver cada 2 minutos por si Railway rota la IP
+setInterval(resolvePublicIp, 120000);
 
 // --- Middleware: contar todo el tráfico entrante ---
 app.use((req, res, next) => {
