@@ -22,8 +22,8 @@ let lastRequestCount = 0;
 // Contar requests
 app.use((req, res, next) => {
     metrics.requests++;
-    metrics.bytesIn += JSON.stringify(req.body).length + req.url.length;
-    res.on('finish', () => {});
+    const bodySize = req.body ? JSON.stringify(req.body).length : 0;
+    metrics.bytesIn += bodySize + req.url.length;
     next();
 });
 
