@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const dns = require('dns');
+const os = require('os');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,7 +19,14 @@ let metrics = {
     attacksDetected: 0
 };
 
-let lastRequestCount = 0;
+let serverIp = '0.0.0.0';
+
+// Resolver IP real del servidor
+dns.lookup(os.hostname(), (err, addr) => {
+    if (!err) serverIp = addr;
+});
+
+
 
 // Contar requests
 app.use((req, res, next) => {
@@ -31,6 +40,9 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // API de métricas
 app.get('/api/metrics', (req, res) => res.json(getMetrics()));
+
+// API de info del servidor
+app.get('/api/info', (req, res) => res.json({ ip: serverIp, port: PORT }));
 
 // WebSocket
 wss.on('connection', (ws) => {

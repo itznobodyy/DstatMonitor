@@ -215,10 +215,17 @@
             ws.onopen = () => {
                 document.getElementById('connDot').className = 'status-dot online';
                 document.getElementById('connStatus').textContent = 'Conectado';
-                document.getElementById('urlDisplay').textContent = `${ip}:${port}`;
-                document.getElementById('serverIp').textContent = `IP: ${ip}`;
-                document.getElementById('serverPort').textContent = `Puerto: ${port}`;
                 addLog('Conectado al servidor de monitoreo');
+                // Obtener IP numérica real del servidor
+                fetch('/api/info').then(r => r.json()).then(info => {
+                    ip = info.ip;
+                    port = info.port;
+                    document.getElementById('ipInput').value = ip;
+                    document.getElementById('portInput').value = port;
+                    document.getElementById('urlDisplay').textContent = `${ip}:${port}`;
+                    document.getElementById('serverIp').textContent = `IP: ${ip}`;
+                    document.getElementById('serverPort').textContent = `Puerto: ${port}`;
+                }).catch(() => {});
             };
 
             ws.onmessage = (e) => {
