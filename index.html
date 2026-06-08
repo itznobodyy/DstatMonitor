@@ -321,14 +321,9 @@
     portInput.addEventListener('blur',  () => userEditing = false);
 
     function updateUI(data) {
-        // URL display — solo actualizar inputs si el usuario NO está editando
-        if (data.target) {
-            document.getElementById('urlDisplay').textContent = `${data.target.ip}:${data.target.port}`;
-            if (!userEditing) {
-                ipInput.value   = data.target.ip;
-                portInput.value = data.target.port;
-            }
-        }
+        // URL display — siempre usa lo que tienen los inputs, no lo del servidor
+        document.getElementById('urlDisplay').textContent =
+            `${ipInput.value.trim() || data.target.ip}:${portInput.value.trim() || data.target.port}`;
 
         // Status dot
         const dot = document.getElementById('connDot');
@@ -404,11 +399,11 @@
         ws.onmessage = (e) => updateUI(JSON.parse(e.data));
     }
 
-    // Fetch initial info
+    // Fetch initial info — solo rellenar si los inputs están vacíos
     fetch('/api/info').then(r => r.json()).then(info => {
-        document.getElementById('ipInput').value   = info.ip;
-        document.getElementById('portInput').value = info.port;
-        document.getElementById('urlDisplay').textContent = `${info.ip}:${info.port}`;
+        if (!ipInput.value) ipInput.value = info.ip;
+        if (!portInput.value) portInput.value = info.port;
+        document.getElementById('urlDisplay').textContent = `${ipInput.value}:${portInput.value}`;
     }).catch(() => {});
 
     connect();
