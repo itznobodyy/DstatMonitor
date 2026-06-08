@@ -33,21 +33,19 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/api/metrics', (req, res) => res.json(getMetrics()));
 
 // WebSocket
-wss.on('connection', () => {
+wss.on('connection', (ws) => {
     const interval = setInterval(() => {
         metrics.requestRate = metrics.requests - lastRequestCount;
         lastRequestCount = metrics.requests;
         
         if (metrics.requestRate > 100) metrics.attacksDetected++;
         
-        if (wss.clients.size > 0) {
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify(getMetrics()));
-                }
-            });
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(getMetrics()));
         }
     }, 1000);
+
+    ws.on('close', () => clearInterval(interval));
 });
 
 function getMetrics() {
