@@ -2,9 +2,9 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Dstat Monitor</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #0a0e14;
@@ -17,262 +17,266 @@
             --red: #ff5252;
             --blue: #40c4ff;
             --yellow: #ffd740;
-            --line: #e0e0e0;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
 
-        /* Sidebar */
+        /* ── Layout ── */
+        .layout { display: flex; min-height: 100vh; }
+
+        /* ── Sidebar desktop ── */
         .sidebar {
-            width: 210px; min-height: 100vh; background: var(--sidebar);
-            border-right: 1px solid var(--border); padding: 20px 0; flex-shrink: 0;
+            width: 200px; flex-shrink: 0; background: var(--sidebar);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            position: sticky; top: 0; height: 100vh; overflow-y: auto;
         }
         .sidebar-logo {
             display: flex; align-items: center; gap: 10px;
-            padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px;
+            padding: 18px 16px; border-bottom: 1px solid var(--border);
+            font-weight: 700; font-size: 14px; letter-spacing: 0.5px;
         }
-        .sidebar-logo span { font-weight: 700; font-size: 15px; letter-spacing: 0.5px; }
-        .sidebar-logo .rocket { font-size: 18px; }
-        .sidebar-section { padding: 0 20px; margin-bottom: 8px; }
-        .sidebar-section-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 16px; }
-        .sidebar-item {
+        .s-section { padding: 12px 10px 0; }
+        .s-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; padding: 10px 6px 6px; }
+        .s-item {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 8px 10px; border-radius: 6px; cursor: pointer;
-            font-size: 13px; color: var(--dim); margin-bottom: 2px; transition: all 0.15s;
+            padding: 9px 10px; border-radius: 6px; font-size: 13px;
+            color: var(--dim); cursor: pointer; margin-bottom: 2px;
         }
-        .sidebar-item:hover { background: #1a2535; color: var(--text); }
-        .sidebar-item.active { background: #1a2535; color: var(--text); }
-        .sidebar-item .left { display: flex; align-items: center; gap: 8px; }
-        .badge-new { background: #1565c0; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
-        .badge-bot { background: #4a148c; color: #fff; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+        .s-item:hover, .s-item.active { background: #1a2535; color: var(--text); }
+        .s-item .l { display: flex; align-items: center; gap: 8px; }
+        .pill { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+        .pill.new { background: #1565c0; color: #fff; }
+        .pill.bot { background: #4a148c; color: #fff; }
 
-        /* Main */
-        .main { flex: 1; padding: 28px; overflow-x: hidden; }
-
-        .page-title { font-size: 13px; color: var(--dim); margin-bottom: 20px; }
-
-        /* Top status bar */
-        .status-bar {
-            display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+        /* ── Mobile bottom nav ── */
+        .mobile-nav {
+            display: none;
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+            background: var(--sidebar); border-top: 1px solid var(--border);
+            padding: 8px 0 env(safe-area-inset-bottom, 8px);
         }
-        .status-pill {
-            padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
-            letter-spacing: 0.5px; border: 1px solid var(--border); background: var(--card);
-            color: var(--dim);
+        .mobile-nav-inner { display: flex; justify-content: space-around; }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 12px; color: var(--dim); font-size: 10px; cursor: pointer; }
+        .nav-btn.active { color: var(--blue); }
+        .nav-btn .ico { font-size: 18px; }
+
+        /* ── Main content ── */
+        .main { flex: 1; min-width: 0; padding: 20px 16px; overflow-x: hidden; }
+
+        /* ── Status bar ── */
+        .status-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .s-pill {
+            padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+            border: 1px solid var(--border); background: var(--card); color: var(--dim);
+            white-space: nowrap;
         }
-        .status-pill.active { background: rgba(0,230,118,0.1); border-color: var(--green); color: var(--green); }
-        .status-pill.attack { background: rgba(255,82,82,0.1); border-color: var(--red); color: var(--red); animation: blink 1s infinite; }
+        .s-pill.online { background: rgba(0,230,118,0.1); border-color: var(--green); color: var(--green); }
+        .s-pill.attack { background: rgba(255,82,82,0.1); border-color: var(--red); color: var(--red); animation: blink 1s infinite; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-        /* Graph card */
-        .graph-card {
+        /* ── Graph card ── */
+        .graph-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+        .graph-meta {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 0; border-bottom: 1px solid var(--border);
+        }
+        .gm-item { padding: 12px 14px; border-right: 1px solid var(--border); }
+        .gm-item:nth-child(even) { border-right: none; }
+        .gm-item:nth-child(3), .gm-item:nth-child(4) { border-top: 1px solid var(--border); }
+        .gm-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .gm-val { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; }
+        .copy-btn { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 13px; padding: 0; }
+
+        .graph-wrap { padding: 8px 0 0; }
+        canvas#mainGraph { width: 100%; height: 160px; display: block; }
+
+        /* ── Metrics grid ── */
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .mc {
             background: var(--card); border: 1px solid var(--border);
-            border-radius: 10px; overflow: hidden; margin-bottom: 20px;
+            border-radius: 10px; padding: 14px 12px;
         }
-        .graph-header {
-            display: flex; gap: 24px; padding: 20px 24px 0; flex-wrap: wrap;
-        }
-        .graph-info { flex: 1; min-width: 160px; }
-        .graph-info-label { font-size: 11px; color: var(--dim); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-        .graph-info-value { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
-        .copy-btn {
-            background: none; border: none; color: var(--dim); cursor: pointer; font-size: 14px; padding: 2px;
-        }
-        .copy-btn:hover { color: var(--text); }
+        .mc-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+        .mc-val { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; line-height: 1; }
+        .mc-unit { font-size: 11px; font-weight: 400; color: var(--dim); }
+        .mc-sub { font-size: 10px; color: var(--dim); margin-top: 5px; }
+        .mc.red    .mc-val { color: var(--red); }
+        .mc.blue   .mc-val { color: var(--blue); }
+        .mc.yellow .mc-val { color: var(--yellow); }
+        .mc.green  .mc-val { color: var(--green); }
 
-        .graph-wrap { position: relative; padding: 10px 0 0; }
-        canvas#mainGraph { width: 100%; height: 200px; display: block; }
-
-        /* Metrics row */
-        .metrics-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
-        @media(max-width:700px){ .metrics-row{grid-template-columns:repeat(2,1fr)} }
-
-        .metric-card {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 10px; padding: 18px 16px;
-        }
-        .metric-card-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
-        .metric-card-val {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 24px; font-weight: 700; color: var(--text); line-height: 1;
-        }
-        .metric-card-unit { font-size: 12px; font-weight: 400; color: var(--dim); }
-        .metric-card-sub { font-size: 11px; color: var(--dim); margin-top: 6px; }
-        .metric-card.green .metric-card-val { color: var(--green); }
-        .metric-card.red   .metric-card-val { color: var(--red); }
-        .metric-card.blue  .metric-card-val { color: var(--blue); }
-        .metric-card.yellow .metric-card-val { color: var(--yellow); }
-
-        /* Top IPs */
-        .ips-card {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 10px; padding: 20px; margin-bottom: 20px;
-        }
-        .ips-card h3 { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
-        .ip-row {
-            display: flex; align-items: center; gap: 12px;
-            padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
-        }
+        /* ── Top IPs ── */
+        .section-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 14px; margin-bottom: 14px; }
+        .section-title { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .ip-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
         .ip-row:last-child { border-bottom: none; }
-        .ip-addr { font-family: 'JetBrains Mono', monospace; width: 140px; flex-shrink: 0; color: var(--text); }
-        .ip-bar-wrap { flex: 1; background: #1a2535; border-radius: 3px; height: 5px; overflow: hidden; }
-        .ip-bar { height: 100%; background: var(--blue); border-radius: 3px; transition: width 0.5s; }
-        .ip-cnt { color: var(--yellow); font-family: 'JetBrains Mono', monospace; font-size: 12px; width: 70px; text-align: right; flex-shrink: 0; }
+        .ip-addr { font-family: 'JetBrains Mono', monospace; font-size: 12px; width: 128px; flex-shrink: 0; }
+        .ip-bar-wrap { flex: 1; background: #1a2535; border-radius: 3px; height: 4px; overflow: hidden; }
+        .ip-bar { height: 100%; background: var(--blue); border-radius: 3px; transition: width 0.4s; }
+        .ip-cnt { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--yellow); width: 60px; text-align: right; flex-shrink: 0; }
 
-        /* Log */
-        .log-card {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 10px; padding: 20px;
-        }
-        .log-card h3 { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
-        #logEntries { max-height: 180px; overflow-y: auto; }
+        /* ── Log ── */
+        #logEntries { max-height: 200px; overflow-y: auto; }
         .log-line {
-            display: flex; justify-content: space-between; gap: 12px;
-            font-family: 'JetBrains Mono', monospace; font-size: 12px;
-            padding: 6px 0; border-bottom: 1px solid #141e2a;
-            color: var(--dim);
+            display: flex; justify-content: space-between; gap: 8px;
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            padding: 6px 0; border-bottom: 1px solid #141e2a; color: var(--dim);
         }
         .log-line.alert { color: var(--red); }
         .log-line.warn  { color: var(--yellow); }
         .log-line.ok    { color: var(--green); }
         .log-time { white-space: nowrap; flex-shrink: 0; opacity: 0.6; }
+
+        /* ── Mobile bottom padding ── */
+        .bottom-spacer { height: 70px; display: none; }
+
+        /* ── Responsive ── */
+        @media (max-width: 640px) {
+            .sidebar { display: none; }
+            .mobile-nav { display: block; }
+            .bottom-spacer { display: block; }
+            .main { padding: 14px 12px; }
+            canvas#mainGraph { height: 140px; }
+            .mc-val { font-size: 18px; }
+            .gm-val { font-size: 13px; }
+        }
+
+        @media (min-width: 641px) {
+            .graph-meta { grid-template-columns: repeat(4, 1fr); }
+            .gm-item:nth-child(3), .gm-item:nth-child(4) { border-top: none; }
+            .gm-item { border-right: 1px solid var(--border); }
+            .gm-item:last-child { border-right: none; }
+            canvas#mainGraph { height: 180px; }
+            .metrics-grid { grid-template-columns: repeat(4, 1fr); }
+        }
     </style>
 </head>
 <body>
+<div class="layout">
 
-<!-- Sidebar -->
-<div class="sidebar">
-    <div class="sidebar-logo">
-        <span class="rocket">🚀</span>
-        <span>dstat monitor</span>
+    <!-- Sidebar (desktop) -->
+    <div class="sidebar">
+        <div class="sidebar-logo">🚀 dstat monitor</div>
+        <div class="s-section">
+            <div class="s-item active"><div class="l">📊 Dashboard</div></div>
+            <div class="s-label">Reviews & Tools</div>
+            <div class="s-item"><div class="l">📈 Booter Review</div></div>
+            <div class="s-item"><div class="l">🔧 Tools <span class="pill new">NEW</span></div></div>
+            <div class="s-item"><div class="l">✈️ Telegram Dstat <span class="pill bot">BOT</span></div></div>
+            <div class="s-label">Live Dstat</div>
+            <div class="s-item active"><div class="l">🌐 Layer 4</div><span>›</span></div>
+            <div class="s-item"><div class="l">🌐 Layer 7</div><span>›</span></div>
+        </div>
     </div>
-    <div class="sidebar-section">
-        <div class="sidebar-item active">
-            <div class="left">📊 Dashboard</div>
+
+    <!-- Main -->
+    <div class="main">
+
+        <!-- Status -->
+        <div class="status-bar">
+            <div class="s-pill online">● ONLINE</div>
+            <div class="s-pill" id="attackPill">STANDBY</div>
+            <div class="s-pill">⏱ <span id="uptimePill">00:00:00</span></div>
         </div>
-        <div class="sidebar-section-label">Reviews & Tools</div>
-        <div class="sidebar-item">
-            <div class="left">📈 Booter Review</div>
+
+        <!-- Graph card -->
+        <div class="graph-card">
+            <div class="graph-meta">
+                <div class="gm-item">
+                    <div class="gm-label">Graph Name</div>
+                    <div class="gm-val">Attack-Monitor</div>
+                </div>
+                <div class="gm-item">
+                    <div class="gm-label">IP Address</div>
+                    <div class="gm-val">
+                        <span id="ipDisplay">...</span>
+                        <button class="copy-btn" onclick="copyIp()">⧉</button>
+                    </div>
+                </div>
+                <div class="gm-item">
+                    <div class="gm-label">Port</div>
+                    <div class="gm-val">443</div>
+                </div>
+                <div class="gm-item">
+                    <div class="gm-label">Bandwidth</div>
+                    <div class="gm-val" id="bwDisplay">0.00 Kb/s</div>
+                </div>
+            </div>
+            <div class="graph-wrap">
+                <canvas id="mainGraph"></canvas>
+            </div>
         </div>
-        <div class="sidebar-item">
-            <div class="left">🔧 Tools <span class="badge-new">NEW</span></div>
+
+        <!-- Metrics -->
+        <div class="metrics-grid">
+            <div class="mc red">
+                <div class="mc-label">Requests/seg</div>
+                <div class="mc-val" id="rpsVal">0 <span class="mc-unit">r/s</span></div>
+                <div class="mc-sub">Pico: <span id="peakRps">0</span></div>
+            </div>
+            <div class="mc blue">
+                <div class="mc-label">Bandwidth</div>
+                <div class="mc-val" id="gbpsVal">0.0000 <span class="mc-unit">Gbps</span></div>
+                <div class="mc-sub">Pico: <span id="peakGbps">0.0000</span></div>
+            </div>
+            <div class="mc yellow">
+                <div class="mc-label">IPs únicas</div>
+                <div class="mc-val" id="uniqueIps">0</div>
+                <div class="mc-sub">atacantes</div>
+            </div>
+            <div class="mc green">
+                <div class="mc-label">Total req</div>
+                <div class="mc-val" id="totalReq">0</div>
+                <div class="mc-sub">desde inicio</div>
+            </div>
         </div>
-        <div class="sidebar-item">
-            <div class="left">✈️ Telegram Dstat <span class="badge-bot">BOT</span></div>
+
+        <!-- Top IPs -->
+        <div class="section-card">
+            <div class="section-title">Top IPs atacantes</div>
+            <div id="topIpsList"><div style="color:var(--dim);font-size:12px;padding:4px 0">Sin tráfico aún...</div></div>
         </div>
-        <div class="sidebar-section-label">Live Dstat</div>
-        <div class="sidebar-item active">
-            <div class="left">🌐 Layer 4</div>
-            <span>›</span>
+
+        <!-- Log -->
+        <div class="section-card">
+            <div class="section-title">Registro de eventos</div>
+            <div id="logEntries"></div>
         </div>
-        <div class="sidebar-item">
-            <div class="left">🌐 Layer 7</div>
-            <span>›</span>
-        </div>
+
+        <div class="bottom-spacer"></div>
     </div>
 </div>
 
-<!-- Main -->
-<div class="main">
-    <div class="page-title">Dashboard › Live Dstat</div>
-
-    <!-- Status pills -->
-    <div class="status-bar">
-        <div class="status-pill active" id="statusPill">● ONLINE</div>
-        <div class="status-pill" id="attackPill">STANDBY</div>
-        <div class="status-pill">Uptime: <span id="uptimePill">00:00:00</span></div>
-    </div>
-
-    <!-- Graph card -->
-    <div class="graph-card">
-        <div class="graph-header">
-            <div class="graph-info">
-                <div class="graph-info-label">Graph Name</div>
-                <div class="graph-info-value">Attack-Monitor</div>
-            </div>
-            <div class="graph-info">
-                <div class="graph-info-label">IP Address</div>
-                <div class="graph-info-value">
-                    <span id="ipDisplay">...</span>
-                    <button class="copy-btn" onclick="copyIp()" title="Copiar IP">⧉</button>
-                </div>
-            </div>
-            <div class="graph-info">
-                <div class="graph-info-label">Port</div>
-                <div class="graph-info-value" id="portDisplay">443</div>
-            </div>
-            <div class="graph-info">
-                <div class="graph-info-label">Bandwidth</div>
-                <div class="graph-info-value" id="bwDisplay">0.00 Kb/s</div>
-            </div>
-        </div>
-        <div class="graph-wrap">
-            <canvas id="mainGraph"></canvas>
-        </div>
-    </div>
-
-    <!-- Metrics -->
-    <div class="metrics-row">
-        <div class="metric-card red">
-            <div class="metric-card-label">Requests / seg</div>
-            <div class="metric-card-val" id="rpsVal">0 <span class="metric-card-unit">req/s</span></div>
-            <div class="metric-card-sub">Pico: <span id="peakRps">0</span></div>
-        </div>
-        <div class="metric-card blue">
-            <div class="metric-card-label">Ancho de banda</div>
-            <div class="metric-card-val" id="gbpsVal">0.0000 <span class="metric-card-unit">Gbps</span></div>
-            <div class="metric-card-sub">Pico: <span id="peakGbps">0.0000</span></div>
-        </div>
-        <div class="metric-card yellow">
-            <div class="metric-card-label">IPs únicas</div>
-            <div class="metric-card-val" id="uniqueIps">0</div>
-            <div class="metric-card-sub">atacantes detectados</div>
-        </div>
-        <div class="metric-card green">
-            <div class="metric-card-label">Total requests</div>
-            <div class="metric-card-val" id="totalReq">0</div>
-            <div class="metric-card-sub">desde inicio</div>
-        </div>
-    </div>
-
-    <!-- Top IPs -->
-    <div class="ips-card">
-        <h3>Top IPs atacantes</h3>
-        <div id="topIpsList"><div style="color:var(--dim);font-size:13px;padding:8px 0">Sin tráfico aún...</div></div>
-    </div>
-
-    <!-- Log -->
-    <div class="log-card">
-        <h3>Registro de eventos</h3>
-        <div id="logEntries"></div>
+<!-- Mobile bottom nav -->
+<div class="mobile-nav">
+    <div class="mobile-nav-inner">
+        <div class="nav-btn active"><div class="ico">📊</div>Dashboard</div>
+        <div class="nav-btn"><div class="ico">🌐</div>Layer 4</div>
+        <div class="nav-btn"><div class="ico">🌐</div>Layer 7</div>
+        <div class="nav-btn"><div class="ico">🔧</div>Tools</div>
     </div>
 </div>
 
 <script>
-    let ws;
-    let publicIp = '';
-    let wasAttack = false;
-    let lastRps = 0;
-
-    // Historial para el gráfico de línea — 120 puntos
+    let ws, publicIp = '', wasAttack = false, lastRps = 0;
     const BW_HISTORY = Array(120).fill(0);
 
     function addLog(msg, type = '') {
-        const div = document.createElement('div');
-        div.className = 'log-line' + (type ? ' ' + type : '');
-        div.innerHTML = `<span>${msg}</span><span class="log-time">${new Date().toLocaleTimeString()}</span>`;
+        const d = document.createElement('div');
+        d.className = 'log-line' + (type ? ' ' + type : '');
+        d.innerHTML = `<span>${msg}</span><span class="log-time">${new Date().toLocaleTimeString()}</span>`;
         const c = document.getElementById('logEntries');
-        c.insertBefore(div, c.firstChild);
+        c.insertBefore(d, c.firstChild);
         if (c.children.length > 50) c.removeChild(c.lastChild);
     }
 
     function copyIp() {
         if (!publicIp) return;
         navigator.clipboard.writeText(publicIp).then(() => {
-            const btn = document.querySelector('.copy-btn');
-            const orig = btn.textContent;
-            btn.textContent = '✓';
-            setTimeout(() => btn.textContent = orig, 1500);
+            const b = document.querySelector('.copy-btn');
+            b.textContent = '✓'; setTimeout(() => b.textContent = '⧉', 1500);
         });
     }
 
@@ -281,7 +285,15 @@
         if (kbps < 1000) return `${kbps.toFixed(2)} Kb/s`;
         const mbps = kbps / 1000;
         if (mbps < 1000) return `${mbps.toFixed(2)} Mb/s`;
-        return `${(mbps/1000).toFixed(4)} Gb/s`;
+        return `${(mbps / 1000).toFixed(4)} Gb/s`;
+    }
+
+    function niceNumber(v) {
+        if (v <= 0) return 100;
+        const e = Math.floor(Math.log10(v));
+        const f = v / Math.pow(10, e);
+        const n = f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10;
+        return n * Math.pow(10, e);
     }
 
     function drawGraph(history) {
@@ -290,98 +302,67 @@
         const rect = canvas.getBoundingClientRect();
         if (!rect.width) return;
         canvas.width  = rect.width * dpr;
-        canvas.height = 200 * dpr;
+        canvas.height = rect.height * dpr;
         const ctx = canvas.getContext('2d');
         ctx.scale(dpr, dpr);
 
-        const W = rect.width, H = 200;
-        const PAD_LEFT = 64, PAD_RIGHT = 12, PAD_TOP = 12, PAD_BOTTOM = 24;
-        const gW = W - PAD_LEFT - PAD_RIGHT;
-        const gH = H - PAD_TOP - PAD_BOTTOM;
+        const W = rect.width, H = rect.height;
+        const PL = 58, PR = 10, PT = 10, PB = 22;
+        const gW = W - PL - PR, gH = H - PT - PB;
 
         ctx.clearRect(0, 0, W, H);
 
-        // Max value para escala
         const maxVal = Math.max(...history, 100);
-        // Escala Y bonita
-        const niceMax = niceNumber(maxVal);
+        const nice   = niceNumber(maxVal);
+        const steps  = 5;
 
-        // Grid lines + labels Y
-        ctx.strokeStyle = '#1a2535';
-        ctx.lineWidth = 1;
-        ctx.fillStyle = '#546e7a';
-        ctx.font = `11px 'Inter', sans-serif`;
+        // Grid + Y labels
+        ctx.font = `10px Inter, sans-serif`;
         ctx.textAlign = 'right';
-
-        const steps = 5;
         for (let i = 0; i <= steps; i++) {
-            const val = (niceMax / steps) * i;
-            const y = PAD_TOP + gH - (val / niceMax) * gH;
-            ctx.beginPath();
-            ctx.moveTo(PAD_LEFT, y);
-            ctx.lineTo(W - PAD_RIGHT, y);
-            ctx.stroke();
-            ctx.fillText(formatBw(val / 8), PAD_LEFT - 6, y + 4);
+            const v = (nice / steps) * i;
+            const y = PT + gH - (v / nice) * gH;
+            ctx.strokeStyle = '#1a2535'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(PL, y); ctx.lineTo(W - PR, y); ctx.stroke();
+            ctx.fillStyle = '#546e7a';
+            ctx.fillText(formatBw(v / 8), PL - 4, y + 3.5);
         }
 
-        // Línea del gráfico
+        // Fill
+        const grad = ctx.createLinearGradient(0, PT, 0, PT + gH);
+        grad.addColorStop(0, 'rgba(224,224,224,0.12)');
+        grad.addColorStop(1, 'rgba(224,224,224,0)');
         const pts = history.length;
-        const stepX = gW / (pts - 1);
-
-        // Fill bajo la línea
-        const grad = ctx.createLinearGradient(0, PAD_TOP, 0, PAD_TOP + gH);
-        grad.addColorStop(0, 'rgba(224,224,224,0.15)');
-        grad.addColorStop(1, 'rgba(224,224,224,0.0)');
-
+        const sX  = gW / (pts - 1);
         ctx.beginPath();
         history.forEach((v, i) => {
-            const x = PAD_LEFT + i * stepX;
-            const y = PAD_TOP + gH - (v / niceMax) * gH;
+            const x = PL + i * sX, y = PT + gH - (v / nice) * gH;
             i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         });
-        ctx.lineTo(PAD_LEFT + (pts - 1) * stepX, PAD_TOP + gH);
-        ctx.lineTo(PAD_LEFT, PAD_TOP + gH);
+        ctx.lineTo(PL + (pts - 1) * sX, PT + gH);
+        ctx.lineTo(PL, PT + gH);
         ctx.closePath();
-        ctx.fillStyle = grad;
-        ctx.fill();
+        ctx.fillStyle = grad; ctx.fill();
 
-        // Línea principal
+        // Line
         ctx.beginPath();
         history.forEach((v, i) => {
-            const x = PAD_LEFT + i * stepX;
-            const y = PAD_TOP + gH - (v / niceMax) * gH;
+            const x = PL + i * sX, y = PT + gH - (v / nice) * gH;
             i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         });
-        ctx.strokeStyle = '#e0e0e0';
-        ctx.lineWidth = 1.5;
-        ctx.lineJoin = 'round';
-        ctx.stroke();
+        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke();
 
-        // Eje X — tiempo
-        ctx.fillStyle = '#546e7a';
-        ctx.textAlign = 'center';
-        ctx.font = `10px 'Inter', sans-serif`;
-        ctx.fillText('−120s', PAD_LEFT, H - 6);
-        ctx.fillText('−60s', PAD_LEFT + gW / 2, H - 6);
-        ctx.fillText('ahora', PAD_LEFT + gW, H - 6);
-    }
-
-    function niceNumber(val) {
-        if (val <= 0) return 100;
-        const exp = Math.floor(Math.log10(val));
-        const f = val / Math.pow(10, exp);
-        let nice;
-        if (f < 1.5) nice = 1;
-        else if (f < 3) nice = 2;
-        else if (f < 7) nice = 5;
-        else nice = 10;
-        return nice * Math.pow(10, exp);
+        // X labels
+        ctx.fillStyle = '#546e7a'; ctx.textAlign = 'center';
+        ctx.fillText('−120s', PL, H - 5);
+        ctx.fillText('−60s',  PL + gW / 2, H - 5);
+        ctx.fillText('ahora', PL + gW, H - 5);
     }
 
     function renderTopIps(topIps) {
         const el = document.getElementById('topIpsList');
-        if (!topIps || topIps.length === 0) {
-            el.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:8px 0">Sin tráfico aún...</div>';
+        if (!topIps || !topIps.length) {
+            el.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:4px 0">Sin tráfico aún...</div>';
             return;
         }
         const max = topIps[0].count || 1;
@@ -390,72 +371,48 @@
                 <span class="ip-addr">${ip}</span>
                 <div class="ip-bar-wrap"><div class="ip-bar" style="width:${(count/max*100).toFixed(1)}%"></div></div>
                 <span class="ip-cnt">${count.toLocaleString()} req</span>
-            </div>
-        `).join('');
+            </div>`).join('');
     }
 
-    function updateUI(data) {
-        // IP
-        if (data.publicIp && data.publicIp !== '...') {
-            publicIp = data.publicIp;
-            document.getElementById('ipDisplay').textContent = data.publicIp;
+    function updateUI(d) {
+        if (d.publicIp && d.publicIp !== '...') {
+            publicIp = d.publicIp;
+            document.getElementById('ipDisplay').textContent = d.publicIp;
         }
+        document.getElementById('uptimePill').textContent = d.uptimeFormatted || '00:00:00';
 
-        // Uptime
-        document.getElementById('uptimePill').textContent = data.uptimeFormatted || '00:00:00';
+        const ap = document.getElementById('attackPill');
+        if (d.underAttack) { ap.className = 's-pill attack'; ap.textContent = '⚠ BAJO ATAQUE'; }
+        else               { ap.className = 's-pill';        ap.textContent = 'STANDBY'; }
 
-        // Status pills
-        const attackPill = document.getElementById('attackPill');
-        if (data.underAttack) {
-            attackPill.className = 'status-pill attack';
-            attackPill.textContent = '⚠ BAJO ATAQUE';
-        } else {
-            attackPill.className = 'status-pill';
-            attackPill.textContent = 'STANDBY';
-        }
+        if (d.underAttack && !wasAttack) addLog(`⚠ ATAQUE — ${d.currentRps} req/s`, 'alert');
+        if (!d.underAttack && wasAttack) addLog('✓ Tráfico normalizado', 'ok');
+        if (d.currentRps > 0 && lastRps === 0) addLog(`Tráfico: ${d.currentRps} req/s`, 'warn');
+        wasAttack = d.underAttack; lastRps = d.currentRps;
 
-        // Logs
-        if (data.underAttack && !wasAttack) addLog(`⚠ ATAQUE DETECTADO — ${data.currentRps} req/s`, 'alert');
-        if (!data.underAttack && wasAttack) addLog('✓ Tráfico normalizado', 'ok');
-        if (data.currentRps > 0 && lastRps === 0) addLog(`Tráfico entrante: ${data.currentRps} req/s`, 'warn');
-        wasAttack = data.underAttack;
-        lastRps = data.currentRps;
+        document.getElementById('bwDisplay').textContent = formatBw(d.currentBps || 0);
+        document.getElementById('rpsVal').innerHTML   = `${d.currentRps.toLocaleString()} <span class="mc-unit">r/s</span>`;
+        document.getElementById('peakRps').textContent = d.peakRps.toLocaleString();
+        document.getElementById('gbpsVal').innerHTML  = `${d.gbps.toFixed(4)} <span class="mc-unit">Gbps</span>`;
+        document.getElementById('peakGbps').textContent = d.peakGbps.toFixed(4);
+        document.getElementById('uniqueIps').textContent = d.uniqueIps.toLocaleString();
+        document.getElementById('totalReq').textContent  = d.totalRequests.toLocaleString();
 
-        // Bandwidth display en header del gráfico
-        document.getElementById('bwDisplay').textContent = formatBw(data.currentBps || 0);
-
-        // Métricas
-        document.getElementById('rpsVal').innerHTML =
-            `${data.currentRps.toLocaleString()} <span class="metric-card-unit">req/s</span>`;
-        document.getElementById('peakRps').textContent = data.peakRps.toLocaleString();
-
-        document.getElementById('gbpsVal').innerHTML =
-            `${data.gbps.toFixed(4)} <span class="metric-card-unit">Gbps</span>`;
-        document.getElementById('peakGbps').textContent = data.peakGbps.toFixed(4);
-
-        document.getElementById('uniqueIps').textContent = data.uniqueIps.toLocaleString();
-        document.getElementById('totalReq').textContent  = data.totalRequests.toLocaleString();
-
-        // Actualizar historial de BW para el gráfico (bytes/s)
-        BW_HISTORY.push(data.currentBps || 0);
+        BW_HISTORY.push(d.currentBps || 0);
         if (BW_HISTORY.length > 120) BW_HISTORY.shift();
         drawGraph(BW_HISTORY);
-
-        // Top IPs
-        renderTopIps(data.topIps);
+        renderTopIps(d.topIps);
     }
 
     function connect() {
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${proto}//${location.host}`);
-        ws.onopen    = () => addLog('Monitor activo y escuchando', 'ok');
+        ws.onopen    = () => addLog('Monitor activo', 'ok');
         ws.onclose   = () => { addLog('Reconectando...', 'warn'); setTimeout(connect, 3000); };
         ws.onmessage = (e) => updateUI(JSON.parse(e.data));
     }
 
     connect();
-
-    // Redibujar el gráfico si cambia el tamaño de ventana
     window.addEventListener('resize', () => drawGraph(BW_HISTORY));
 </script>
 </body>
