@@ -113,6 +113,9 @@ async function monitorLoop() {
 
 monitorLoop();
 
+// Middleware primero, antes de las rutas
+app.use(express.json());
+
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.get('/api/info', (req, res) => res.json({ ip: target.ip, port: target.port }));
@@ -120,7 +123,6 @@ app.get('/api/info', (req, res) => res.json({ ip: target.ip, port: target.port }
 app.get('/api/metrics', (req, res) => res.json(getMetrics()));
 
 // Actualizar target via POST
-app.use(express.json());
 app.post('/api/target', (req, res) => {
     const { ip, port } = req.body;
     if (ip) target.ip = ip;
