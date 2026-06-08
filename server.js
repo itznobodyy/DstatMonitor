@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const WebSocket = require('ws');
 const path = require('path');
 const dns = require('dns');
@@ -20,10 +21,9 @@ let metrics = {
 };
 
 let serverIp = '0.0.0.0';
-let publicPort = PORT;
 
 // Resolver IP pública real del servidor
-http.get('http://api.ipify.org', (res) => {
+https.get('https://api.ipify.org', (res) => {
     let data = '';
     res.on('data', chunk => data += chunk);
     res.on('end', () => { serverIp = data.trim(); });
