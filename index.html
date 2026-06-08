@@ -251,35 +251,27 @@
     }
 
     function updateTarget() {
-        const ip   = document.getElementById('ipInput').value.trim();
-        const port = document.getElementById('portInput').value.trim();
-        if (!ip || !port) {
-            alert('Ingresa IP y puerto');
-            return;
-        }
+        const ip   = ipInput.value.trim();
+        const port = portInput.value.trim();
+        if (!ip || !port) { alert('Ingresa IP y puerto'); return; }
 
         const btn = document.querySelector('.btn');
         btn.textContent = '...';
         btn.disabled = true;
 
-        fetch('/api/target', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ip, port: parseInt(port) })
-        })
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('urlDisplay').textContent = `${data.target.ip}:${data.target.port}`;
-            addLog(`Objetivo actualizado → ${data.target.ip}:${data.target.port}`, 'warn');
+        // Mandar nuevo target via WebSocket directamente
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'setTarget', ip, port: parseInt(port) }));
+            document.getElementById('urlDisplay').textContent = `${ip}:${port}`;
+            addLog(`Objetivo actualizado → ${ip}:${port}`, 'warn');
             lastStatus = null;
             btn.textContent = '✓ OK';
             setTimeout(() => { btn.textContent = 'Actualizar'; btn.disabled = false; }, 1500);
-        })
-        .catch(err => {
-            addLog(`Error al actualizar objetivo: ${err.message}`, 'alert');
+        } else {
+            addLog('WebSocket no conectado, reintentando...', 'alert');
             btn.textContent = 'Actualizar';
             btn.disabled = false;
-        });
+        }
     }
 
     function drawPingGraph(history) {

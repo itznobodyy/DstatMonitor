@@ -18,20 +18,7 @@ let target = { ip: '152.55.176.151', port: 443 };
 
 // Historial de pings (últimos 60 segundos)
 let pingHistory = [];
-let probeStats = {
-    startTime: Date.now(),
-    totalProbes: 0,
-    successProbes: 0,
-    failedProbes: 0,
-    lastLatency: null,
-    minLatency: Infinity,
-    maxLatency: 0,
-    avgLatency: 0,
-    latencySum: 0,
-    downEvents: 0,
-    wasDown: false,
-    currentStatus: 'checking', // 'online' | 'offline' | 'checking'
-};
+let probeStats = resetStats();
 
 let serverIp = '0.0.0.0';
 
@@ -72,47 +59,6 @@ function probeTarget(ip, port, timeoutMs = 3000) {
     });
 }
 
-// Loop de monitoreo: probe cada 500ms
-async function monitorLoop() {
-    while (true) {
-        const result = await probeTarget(target.ip, target.port);
-        const now = Date.now();
-
-        probeStats.totalProbes++;
-
-        if (result.success) {
-            probeStats.successProbes++;
-            probeStats.lastLatency = result.latency;
-            probeStats.latencySum += result.latency;
-            probeStats.avgLatency = Math.round(probeStats.latencySum / probeStats.successProbes);
-            if (result.latency < probeStats.minLatency) probeStats.minLatency = result.latency;
-            if (result.latency > probeStats.maxLatency) probeStats.maxLatency = result.latency;
-            probeStats.currentStatus = 'online';
-            probeStats.wasDown = false;
-
-            pingHistory.push({ t: now, latency: result.latency, ok: true });
-        } else {
-            probeStats.failedProbes++;
-            probeStats.lastLatency = null;
-            probeStats.currentStatus = 'offline';
-
-            if (!probeStats.wasDown) {
-                probeStats.downEvents++;
-                probeStats.wasDown = true;
-            }
-
-            pingHistory.push({ t: now, latency: null, ok: false });
-        }
-
-        // Mantener solo los últimos 120 pings (~60s a 500ms)
-        if (pingHistory.length > 120) pingHistory.shift();
-
-        await new Promise(r => setTimeout(r, 500));
-    }
-}
-
-monitorLoop();
-
 // Middleware primero, antes de las rutas
 app.use(express.json());
 
@@ -122,62 +68,112 @@ app.get('/api/info', (req, res) => res.json({ ip: target.ip, port: target.port }
 
 app.get('/api/metrics', (req, res) => res.json(getMetrics()));
 
-// Actualizar target via POST
+// Actualizar target via POST (para compatibilidad)
 app.post('/api/target', (req, res) => {
     const { ip, port } = req.body;
     if (ip) target.ip = ip;
     if (port) target.port = parseInt(port);
-    // Reset stats al cambiar objetivo
-    probeStats = {
+    res.json({ ok: true, target });
+});
+
+// WebSocket — push métricas cada segundo, acepta target via mensaje
+wss.on('connection', (ws) => {
+    // Cada cliente tiene su propio target y stats
+    let clientTarget = { ip: target.ip, port: target.port };
+    let clientStats = resetStats();
+    let clientHistory = [];
+
+    async function probeLoop() {
+        while (ws.readyState === WebSocket.OPEN) {
+            const result = await probeTarget(clientTarget.ip, clientTarget.port);
+            const now = Date.now();
+
+            clientStats.totalProbes++;
+
+            if (result.success) {
+                clientStats.successProbes++;
+                clientStats.lastLatency = result.latency;
+                clientStats.latencySum += result.latency;
+                clientStats.avgLatency = Math.round(clientStats.latencySum / clientStats.successProbes);
+                if (result.latency < clientStats.minLatency) clientStats.minLatency = result.latency;
+                if (result.latency > clientStats.maxLatency) clientStats.maxLatency = result.latency;
+                clientStats.currentStatus = 'online';
+                clientStats.wasDown = false;
+                clientHistory.push({ t: now, latency: result.latency, ok: true });
+            } else {
+                clientStats.failedProbes++;
+                clientStats.lastLatency = null;
+                clientStats.currentStatus = 'offline';
+                if (!clientStats.wasDown) { clientStats.downEvents++; clientStats.wasDown = true; }
+                clientHistory.push({ t: now, latency: null, ok: false });
+            }
+
+            if (clientHistory.length > 120) clientHistory.shift();
+
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(buildMetrics(clientTarget, clientStats, clientHistory)));
+            }
+
+            await new Promise(r => setTimeout(r, 500));
+        }
+    }
+
+    // Recibir nuevo target desde el cliente
+    ws.on('message', (msg) => {
+        try {
+            const data = JSON.parse(msg);
+            if (data.type === 'setTarget' && data.ip && data.port) {
+                clientTarget = { ip: data.ip, port: parseInt(data.port) };
+                clientStats = resetStats();
+                clientHistory = [];
+            }
+        } catch(e) {}
+    });
+
+    probeLoop();
+    ws.on('close', () => {});
+});
+
+function resetStats() {
+    return {
         startTime: Date.now(),
         totalProbes: 0, successProbes: 0, failedProbes: 0,
         lastLatency: null, minLatency: Infinity, maxLatency: 0,
         avgLatency: 0, latencySum: 0, downEvents: 0,
         wasDown: false, currentStatus: 'checking'
     };
-    pingHistory = [];
-    res.json({ ok: true, target });
-});
+}
 
-// WebSocket — push métricas cada segundo
-wss.on('connection', (ws) => {
-    const interval = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify(getMetrics()));
-        }
-    }, 1000);
-    ws.on('close', () => clearInterval(interval));
-});
-
-function getMetrics() {
-    const uptime = Math.floor((Date.now() - probeStats.startTime) / 1000);
-    const uptimePct = probeStats.totalProbes > 0
-        ? ((probeStats.successProbes / probeStats.totalProbes) * 100).toFixed(2)
+function buildMetrics(t, s, history) {
+    const uptime = Math.floor((Date.now() - s.startTime) / 1000);
+    const uptimePct = s.totalProbes > 0
+        ? ((s.successProbes / s.totalProbes) * 100).toFixed(2)
         : '0.00';
-
-    // Calcular packet loss en los últimos 20 pings
-    const recent = pingHistory.slice(-20);
+    const recent = history.slice(-20);
     const recentLoss = recent.length > 0
         ? (((recent.filter(p => !p.ok).length) / recent.length) * 100).toFixed(0)
         : 0;
-
     return {
-        target: target,
+        target: t,
         uptime,
         uptimeFormatted: formatTime(uptime),
-        status: probeStats.currentStatus,
-        lastLatency: probeStats.lastLatency,
-        minLatency: probeStats.minLatency === Infinity ? null : probeStats.minLatency,
-        maxLatency: probeStats.maxLatency,
-        avgLatency: probeStats.avgLatency,
-        totalProbes: probeStats.totalProbes,
-        successProbes: probeStats.successProbes,
-        failedProbes: probeStats.failedProbes,
+        status: s.currentStatus,
+        lastLatency: s.lastLatency,
+        minLatency: s.minLatency === Infinity ? null : s.minLatency,
+        maxLatency: s.maxLatency,
+        avgLatency: s.avgLatency,
+        totalProbes: s.totalProbes,
+        successProbes: s.successProbes,
+        failedProbes: s.failedProbes,
         uptimePct: parseFloat(uptimePct),
         packetLoss: parseInt(recentLoss),
-        downEvents: probeStats.downEvents,
-        pingHistory: pingHistory.slice(-60),
+        downEvents: s.downEvents,
+        pingHistory: history.slice(-60),
     };
+}
+
+function getMetrics() {
+    return buildMetrics(target, probeStats, pingHistory);
 }
 
 function formatTime(s) {
