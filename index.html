@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network Monitor</title>
+    <title>Attack Monitor</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -11,235 +11,172 @@
             --card: #161b22;
             --border: #30363d;
             --text: #e6edf3;
-            --text-dim: #8b949e;
+            --dim: #8b949e;
             --green: #3fb950;
             --red: #f85149;
             --blue: #58a6ff;
             --yellow: #d29922;
             --orange: #f0883e;
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-        .container { max-width: 960px; margin: 0 auto; padding: 30px 20px; }
+        .container { max-width: 980px; margin: 0 auto; padding: 28px 20px; }
 
-        h1 { font-size: 18px; font-weight: 600; margin-bottom: 24px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+        /* Header */
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .header h1 { font-size: 18px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text); }
+        .badge {
+            padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+            background: #1c2128; border: 1px solid var(--border);
+            color: var(--dim); transition: all 0.3s;
+        }
+        .badge.attack { background: rgba(248,81,73,0.15); border-color: var(--red); color: var(--red); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
 
-        .server-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
+        /* Target box */
+        .target-box {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px 24px; margin-bottom: 20px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
         }
-        .server-box h2 { font-size: 12px; color: var(--text-dim); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
-
-        .input-group { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-        input {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 14px;
-            color: var(--text);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 15px;
-            flex: 1;
-            min-width: 120px;
+        .target-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .target-value { font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; color: var(--blue); }
+        .target-sub { font-size: 13px; color: var(--dim); margin-top: 4px; }
+        .copy-btn {
+            background: var(--blue); color: #0d1117; border: none; padding: 10px 20px;
+            border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; white-space: nowrap;
         }
-        input:focus { outline: none; border-color: var(--blue); }
-
-        .btn {
-            background: var(--blue);
-            color: #0d1117;
-            border: none;
-            padding: 10px 22px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-        .btn:hover { opacity: 0.85; }
-
-        .url-display {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--blue);
-            text-align: center;
-            padding: 18px;
-            background: var(--bg);
-            border-radius: 8px;
-            letter-spacing: 1px;
-        }
-
-        .status-row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-        .status {
-            flex: 1;
-            background: var(--bg);
-            padding: 14px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 14px;
-            min-width: 120px;
-        }
-        .status-dot {
-            width: 10px; height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 7px;
-        }
-        .dot-online { background: var(--green); box-shadow: 0 0 6px var(--green); }
-        .dot-offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
-        .dot-checking { background: var(--yellow); }
+        .copy-btn:hover { opacity: 0.85; }
 
         /* Metrics grid */
-        .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
-        @media (max-width: 700px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
+        .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 16px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 16px; }
+        @media(max-width:700px){ .grid-4{grid-template-columns:repeat(2,1fr)} .grid-3{grid-template-columns:repeat(2,1fr)} }
 
         .metric {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px 16px;
-            text-align: center;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px 16px; text-align: center;
         }
-        .metric-value {
+        .metric.blue   { border-top: 3px solid var(--blue); }
+        .metric.green  { border-top: 3px solid var(--green); }
+        .metric.red    { border-top: 3px solid var(--red); }
+        .metric.yellow { border-top: 3px solid var(--yellow); }
+        .metric.orange { border-top: 3px solid var(--orange); }
+        .metric-val {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            line-height: 1;
+            font-size: 30px; font-weight: 700; line-height: 1; margin-bottom: 6px;
         }
-        .metric-unit { font-size: 13px; font-weight: 400; opacity: 0.7; }
-        .metric-label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .metric.blue  { border-top: 3px solid var(--blue); }
-        .metric.green { border-top: 3px solid var(--green); }
-        .metric.red   { border-top: 3px solid var(--red); }
-        .metric.yellow{ border-top: 3px solid var(--yellow); }
-        .metric.orange{ border-top: 3px solid var(--orange); }
+        .metric-unit { font-size: 13px; font-weight: 400; opacity: 0.65; }
+        .metric-lbl { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .peak { font-size: 11px; color: var(--dim); margin-top: 4px; }
 
-        .latency-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
-        @media (max-width: 500px) { .latency-row { grid-template-columns: 1fr 1fr; } }
-
-        /* Ping graph */
+        /* Graph */
         .graph-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; margin-bottom: 16px;
         }
-        .graph-box h3 { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
-        #pingCanvas { width: 100%; height: 80px; display: block; }
+        .graph-box h3 { font-size: 11px; color: var(--dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        canvas { width: 100%; height: 90px; display: block; }
+
+        /* Top IPs */
+        .ips-box {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; margin-bottom: 16px;
+        }
+        .ips-box h3 { font-size: 11px; color: var(--dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        .ip-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 12px; background: var(--bg); border-radius: 6px; margin-bottom: 6px;
+            font-family: 'JetBrains Mono', monospace; font-size: 13px;
+        }
+        .ip-bar-wrap { flex: 1; margin: 0 14px; background: #21262d; border-radius: 4px; height: 6px; overflow: hidden; }
+        .ip-bar { height: 100%; background: var(--blue); border-radius: 4px; transition: width 0.4s; }
+        .ip-count { color: var(--yellow); font-weight: 700; white-space: nowrap; }
 
         /* Log */
         .log-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px;
         }
-        .log-box h3 { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
-        #logEntries { max-height: 240px; overflow-y: auto; }
+        .log-box h3 { font-size: 11px; color: var(--dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        #logEntries { max-height: 220px; overflow-y: auto; }
         .log-entry {
-            padding: 9px 12px;
-            background: var(--bg);
-            border-radius: 6px;
-            margin-bottom: 6px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
+            display: flex; justify-content: space-between; gap: 12px;
+            padding: 8px 12px; background: var(--bg); border-radius: 6px;
+            margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
             border-left: 3px solid var(--green);
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
         }
-        .log-entry.alert  { border-left-color: var(--red); }
-        .log-entry.warn   { border-left-color: var(--yellow); }
-        .log-time { color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
+        .log-entry.alert { border-left-color: var(--red); }
+        .log-entry.warn  { border-left-color: var(--yellow); }
+        .log-time { color: var(--dim); white-space: nowrap; flex-shrink: 0; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>📡 Network Monitor</h1>
 
-    <div class="server-box">
-        <h2>Objetivo a Monitorear</h2>
-        <div class="input-group">
-            <input type="text" id="ipInput" placeholder="IP o hostname">
-            <input type="number" id="portInput" placeholder="Puerto" style="max-width:120px">
-            <button class="btn" onclick="updateTarget()">Actualizar</button>
-        </div>
-        <div class="url-display" id="urlDisplay">---</div>
-        <div class="status-row">
-            <div class="status">
-                <span class="status-dot dot-checking" id="connDot"></span>
-                <span id="connStatus">Verificando...</span>
-            </div>
-            <div class="status" id="uptimePctBox">
-                Uptime: <strong id="uptimePct">--%</strong>
-            </div>
-            <div class="status">
-                Packet Loss: <strong id="packetLoss" style="color:var(--red)">--%</strong>
-            </div>
-            <div class="status">
-                Tiempo activo: <strong id="uptime">00:00:00</strong>
-            </div>
-        </div>
+    <div class="header">
+        <h1>🎯 Attack Monitor</h1>
+        <div class="badge" id="statusBadge">STANDBY</div>
     </div>
 
-    <!-- Main metrics -->
-    <div class="metrics">
+    <!-- Target info -->
+    <div class="target-box">
+        <div>
+            <div class="target-label">Tu servidor — ataca esta IP</div>
+            <div class="target-value" id="targetDisplay">cargando...</div>
+            <div class="target-sub" id="targetSub">Uptime: 00:00:00</div>
+        </div>
+        <button class="copy-btn" onclick="copyIp()">📋 Copiar IP</button>
+    </div>
+
+    <!-- Métricas principales -->
+    <div class="grid-4">
+        <div class="metric red">
+            <div class="metric-val" id="rps">0 <span class="metric-unit">req/s</span></div>
+            <div class="metric-lbl">Requests/seg</div>
+            <div class="peak" id="peakRps">Pico: 0</div>
+        </div>
         <div class="metric blue">
-            <div class="metric-value" id="lastLatency">--<span class="metric-unit">ms</span></div>
-            <div class="metric-label">Latencia actual</div>
+            <div class="metric-val" id="gbps">0.0000 <span class="metric-unit">Gbps</span></div>
+            <div class="metric-lbl">Ancho de banda</div>
+            <div class="peak" id="peakGbps">Pico: 0.0000</div>
         </div>
-        <div class="metric green">
-            <div class="metric-value" id="avgLatency">--<span class="metric-unit">ms</span></div>
-            <div class="metric-label">Latencia promedio</div>
-        </div>
-        <div class="metric yellow">
-            <div class="metric-value" id="minLatency">--<span class="metric-unit">ms</span></div>
-            <div class="metric-label">Latencia mínima</div>
-        </div>
-        <div class="metric red">
-            <div class="metric-value" id="maxLatency">--<span class="metric-unit">ms</span></div>
-            <div class="metric-label">Latencia máxima</div>
-        </div>
-    </div>
-
-    <div class="metrics" style="grid-template-columns: repeat(3,1fr);">
         <div class="metric orange">
-            <div class="metric-value" id="totalProbes">0</div>
-            <div class="metric-label">Total Probes</div>
+            <div class="metric-val" id="uniqueIps">0</div>
+            <div class="metric-lbl">IPs únicas</div>
         </div>
         <div class="metric green">
-            <div class="metric-value" id="successProbes">0</div>
-            <div class="metric-label">Exitosos</div>
-        </div>
-        <div class="metric red">
-            <div class="metric-value" id="failedProbes">0</div>
-            <div class="metric-label">Fallidos / Caídas</div>
+            <div class="metric-val" id="totalReq">0</div>
+            <div class="metric-lbl">Total requests</div>
         </div>
     </div>
 
-    <!-- Ping graph -->
+    <!-- Gráfico RPS -->
     <div class="graph-box">
-        <h3>Historial de Latencia (últimos 60 probes)</h3>
-        <canvas id="pingCanvas"></canvas>
+        <h3>Requests por segundo — últimos 60s</h3>
+        <canvas id="rpsCanvas"></canvas>
+    </div>
+
+    <!-- Top IPs -->
+    <div class="ips-box">
+        <h3>Top IPs atacantes</h3>
+        <div id="topIpsList"><div style="color:var(--dim);font-size:13px">Sin tráfico aún...</div></div>
     </div>
 
     <!-- Log -->
     <div class="log-box">
-        <h3>Registro de Eventos</h3>
+        <h3>Registro de eventos</h3>
         <div id="logEntries"></div>
     </div>
+
 </div>
 
 <script>
     let ws;
-    let lastStatus = null;
-    let lastDownEvents = 0;
+    let lastRps = 0;
+    let wasUnderAttack = false;
+    let publicIp = '';
 
     function addLog(msg, type = 'normal') {
         const div = document.createElement('div');
@@ -247,164 +184,126 @@
         div.innerHTML = `<span>${msg}</span><span class="log-time">${new Date().toLocaleTimeString()}</span>`;
         const c = document.getElementById('logEntries');
         c.insertBefore(div, c.firstChild);
-        if (c.children.length > 30) c.removeChild(c.lastChild);
+        if (c.children.length > 40) c.removeChild(c.lastChild);
     }
 
-    function updateTarget() {
-        const ip   = ipInput.value.trim();
-        const port = portInput.value.trim();
-        if (!ip || !port) { alert('Ingresa IP y puerto'); return; }
-
-        const btn = document.querySelector('.btn');
-        btn.textContent = '...';
-        btn.disabled = true;
-
-        // Mandar nuevo target via WebSocket directamente
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'setTarget', ip, port: parseInt(port) }));
-            document.getElementById('urlDisplay').textContent = `${ip}:${port}`;
-            addLog(`Objetivo actualizado → ${ip}:${port}`, 'warn');
-            lastStatus = null;
-            btn.textContent = '✓ OK';
-            setTimeout(() => { btn.textContent = 'Actualizar'; btn.disabled = false; }, 1500);
-        } else {
-            addLog('WebSocket no conectado, reintentando...', 'alert');
-            btn.textContent = 'Actualizar';
-            btn.disabled = false;
-        }
+    function copyIp() {
+        if (!publicIp) return;
+        navigator.clipboard.writeText(publicIp).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            btn.textContent = '✓ Copiado';
+            setTimeout(() => btn.textContent = '📋 Copiar IP', 1500);
+        });
     }
 
-    function drawPingGraph(history) {
-        const canvas = document.getElementById('pingCanvas');
+    function drawRpsGraph(history) {
+        const canvas = document.getElementById('rpsCanvas');
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
-        canvas.width  = rect.width  * dpr;
-        canvas.height = 80 * dpr;
+        canvas.width  = rect.width * dpr;
+        canvas.height = 90 * dpr;
         const ctx = canvas.getContext('2d');
         ctx.scale(dpr, dpr);
 
-        const w = rect.width;
-        const h = 80;
+        const w = rect.width, h = 90;
         ctx.clearRect(0, 0, w, h);
 
         if (!history || history.length < 2) return;
 
-        const latencies = history.filter(p => p.ok && p.latency != null).map(p => p.latency);
-        const maxLat = latencies.length ? Math.max(...latencies, 50) : 50;
+        const maxRps = Math.max(...history.map(p => p.rps), 10);
+        const barW = w / 60;
 
-        const barW = w / history.length;
+        // Rellenar con vacíos si hay menos de 60
+        const padded = Array(60 - history.length).fill({ rps: 0 }).concat(history);
 
-        history.forEach((p, i) => {
+        padded.forEach((p, i) => {
             const x = i * barW;
-            if (!p.ok) {
-                ctx.fillStyle = 'rgba(248,81,73,0.6)';
-                ctx.fillRect(x, 0, barW - 1, h);
-            } else {
-                const barH = Math.max(3, (p.latency / maxLat) * (h - 6));
-                const pct = p.latency / maxLat;
-                const r = Math.round(63  + pct * (248 - 63));
-                const g = Math.round(185 + pct * (81  - 185));
-                const b = Math.round(80  + pct * (73  - 80));
-                ctx.fillStyle = `rgba(${r},${g},${b},0.85)`;
-                ctx.fillRect(x, h - barH, barW - 1, barH);
-            }
+            const barH = Math.max(2, (p.rps / maxRps) * (h - 6));
+            const pct = p.rps / maxRps;
+            // Verde → amarillo → rojo según intensidad
+            const r = Math.round(63  + pct * (248 - 63));
+            const g = Math.round(185 + pct * (81  - 185));
+            const b = Math.round(80  + pct * (73  - 80));
+            ctx.fillStyle = `rgba(${r},${g},${b},0.85)`;
+            ctx.fillRect(x, h - barH, Math.max(barW - 1, 1), barH);
         });
     }
 
-    // Detectar si el usuario está editando los inputs
-    const ipInput   = document.getElementById('ipInput');
-    const portInput = document.getElementById('portInput');
-    let userEditing = false;
-    ipInput.addEventListener('focus',   () => userEditing = true);
-    portInput.addEventListener('focus', () => userEditing = true);
-    ipInput.addEventListener('blur',    () => userEditing = false);
-    portInput.addEventListener('blur',  () => userEditing = false);
+    function renderTopIps(topIps) {
+        const el = document.getElementById('topIpsList');
+        if (!topIps || topIps.length === 0) {
+            el.innerHTML = '<div style="color:var(--dim);font-size:13px">Sin tráfico aún...</div>';
+            return;
+        }
+        const max = topIps[0].count || 1;
+        el.innerHTML = topIps.map(({ ip, count }) => `
+            <div class="ip-row">
+                <span>${ip}</span>
+                <div class="ip-bar-wrap"><div class="ip-bar" style="width:${(count/max*100).toFixed(1)}%"></div></div>
+                <span class="ip-count">${count.toLocaleString()} req</span>
+            </div>
+        `).join('');
+    }
 
     function updateUI(data) {
-        // URL display — siempre usa lo que tienen los inputs, no lo del servidor
-        document.getElementById('urlDisplay').textContent =
-            `${ipInput.value.trim() || data.target.ip}:${portInput.value.trim() || data.target.port}`;
+        // Target display
+        if (data.publicIp && data.publicIp !== '...') {
+            publicIp = data.publicIp;
+            document.getElementById('targetDisplay').textContent = `${data.publicIp}:443`;
+            document.getElementById('targetSub').textContent =
+                `Uptime: ${data.uptimeFormatted} · Puerto HTTP: ${data.port}`;
+        }
 
-        // Status dot
-        const dot = document.getElementById('connDot');
-        const statusTxt = document.getElementById('connStatus');
-        if (data.status === 'online') {
-            dot.className = 'status-dot dot-online';
-            statusTxt.textContent = 'En línea';
-        } else if (data.status === 'offline') {
-            dot.className = 'status-dot dot-offline';
-            statusTxt.textContent = 'CAÍDO';
+        // Badge de ataque
+        const badge = document.getElementById('statusBadge');
+        if (data.underAttack) {
+            badge.className = 'badge attack';
+            badge.textContent = '⚠ BAJO ATAQUE';
         } else {
-            dot.className = 'status-dot dot-checking';
-            statusTxt.textContent = 'Verificando...';
+            badge.className = 'badge';
+            badge.textContent = 'STANDBY';
         }
 
-        // Log on state changes
-        if (lastStatus !== null && lastStatus !== data.status) {
-            if (data.status === 'offline') addLog('🔴 SERVIDOR CAÍDO — no responde', 'alert');
-            if (data.status === 'online')  addLog('🟢 Servidor volvió en línea', 'normal');
+        // Logs de eventos
+        if (data.underAttack && !wasUnderAttack) {
+            addLog(`🔴 ATAQUE INICIADO — ${data.currentRps} req/s`, 'alert');
         }
-        lastStatus = data.status;
-
-        // Detect new down events mid-session
-        if (data.downEvents > lastDownEvents && lastDownEvents !== 0) {
-            addLog(`⚠️ Nueva caída detectada (total: ${data.downEvents})`, 'alert');
+        if (!data.underAttack && wasUnderAttack) {
+            addLog('🟢 Tráfico normalizado', 'normal');
         }
-        lastDownEvents = data.downEvents;
+        wasUnderAttack = data.underAttack;
 
-        // Latency
-        document.getElementById('lastLatency').innerHTML = data.lastLatency != null
-            ? `${data.lastLatency}<span class="metric-unit">ms</span>`
-            : `--<span class="metric-unit">ms</span>`;
-        document.getElementById('avgLatency').innerHTML = data.avgLatency
-            ? `${data.avgLatency}<span class="metric-unit">ms</span>`
-            : `--<span class="metric-unit">ms</span>`;
-        document.getElementById('minLatency').innerHTML = data.minLatency != null
-            ? `${data.minLatency}<span class="metric-unit">ms</span>`
-            : `--<span class="metric-unit">ms</span>`;
-        document.getElementById('maxLatency').innerHTML = data.maxLatency
-            ? `${data.maxLatency}<span class="metric-unit">ms</span>`
-            : `--<span class="metric-unit">ms</span>`;
-
-        // Probe counts
-        document.getElementById('totalProbes').textContent   = data.totalProbes || 0;
-        document.getElementById('successProbes').textContent = data.successProbes || 0;
-        document.getElementById('failedProbes').textContent  = `${data.failedProbes || 0} / ${data.downEvents || 0}`;
-
-        // Uptime
-        document.getElementById('uptime').textContent    = data.uptimeFormatted || '00:00:00';
-        document.getElementById('uptimePct').textContent = `${data.uptimePct ?? '--'}%`;
-
-        // Packet loss color
-        const loss = data.packetLoss || 0;
-        const lossEl = document.getElementById('packetLoss');
-        lossEl.textContent = `${loss}%`;
-        lossEl.style.color = loss > 50 ? 'var(--red)' : loss > 10 ? 'var(--yellow)' : 'var(--green)';
-
-        // Alert on high latency
-        if (data.lastLatency != null && data.lastLatency > 500) {
-            addLog(`⚠️ Latencia alta: ${data.lastLatency}ms`, 'warn');
+        if (data.currentRps > 0 && lastRps === 0) {
+            addLog(`Tráfico detectado: ${data.currentRps} req/s`, 'warn');
         }
+        lastRps = data.currentRps;
 
-        // Draw graph
-        if (data.pingHistory) drawPingGraph(data.pingHistory);
+        // Métricas
+        document.getElementById('rps').innerHTML =
+            `${data.currentRps.toLocaleString()} <span class="metric-unit">req/s</span>`;
+        document.getElementById('peakRps').textContent = `Pico: ${data.peakRps.toLocaleString()}`;
+
+        document.getElementById('gbps').innerHTML =
+            `${data.gbps.toFixed(4)} <span class="metric-unit">Gbps</span>`;
+        document.getElementById('peakGbps').textContent = `Pico: ${data.peakGbps.toFixed(4)}`;
+
+        document.getElementById('uniqueIps').textContent = data.uniqueIps.toLocaleString();
+        document.getElementById('totalReq').textContent  = data.totalRequests.toLocaleString();
+
+        // Gráfico
+        drawRpsGraph(data.rpsHistory);
+
+        // Top IPs
+        renderTopIps(data.topIps);
     }
 
     function connect() {
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${proto}//${location.host}`);
-
-        ws.onopen  = () => addLog('Conectado al monitor');
-        ws.onclose = () => { setTimeout(connect, 3000); };
+        ws.onopen    = () => addLog('Monitor conectado y activo');
+        ws.onclose   = () => { addLog('Reconectando...', 'warn'); setTimeout(connect, 3000); };
         ws.onmessage = (e) => updateUI(JSON.parse(e.data));
     }
-
-    // Fetch initial info — solo rellenar si los inputs están vacíos
-    fetch('/api/info').then(r => r.json()).then(info => {
-        if (!ipInput.value) ipInput.value = info.ip;
-        if (!portInput.value) portInput.value = info.port;
-        document.getElementById('urlDisplay').textContent = `${ipInput.value}:${portInput.value}`;
-    }).catch(() => {});
 
     connect();
 </script>
