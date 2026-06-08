@@ -15,11 +15,15 @@
             --green: #3fb950;
             --red: #f85149;
             --blue: #58a6ff;
+            --yellow: #d29922;
+            --orange: #f0883e;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-        .container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+        .container { max-width: 960px; margin: 0 auto; padding: 30px 20px; }
+
+        h1 { font-size: 18px; font-weight: 600; margin-bottom: 24px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
 
         .server-box {
             background: var(--card);
@@ -28,225 +32,367 @@
             padding: 24px;
             margin-bottom: 24px;
         }
+        .server-box h2 { font-size: 12px; color: var(--text-dim); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
 
-        .server-box h2 { font-size: 14px; color: var(--text-dim); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
-
-        .input-group { display: flex; gap: 12px; margin-bottom: 16px; }
-        
+        .input-group { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
         input {
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 12px 16px;
+            padding: 10px 14px;
             color: var(--text);
             font-family: 'JetBrains Mono', monospace;
-            font-size: 16px;
+            font-size: 15px;
             flex: 1;
+            min-width: 120px;
         }
         input:focus { outline: none; border-color: var(--blue); }
 
         .btn {
-            background: var(--green);
-            color: #fff;
+            background: var(--blue);
+            color: #0d1117;
             border: none;
-            padding: 12px 24px;
+            padding: 10px 22px;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 14px;
+            white-space: nowrap;
         }
-        .btn:hover { opacity: 0.9; }
+        .btn:hover { opacity: 0.85; }
 
         .url-display {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 24px;
+            font-size: 22px;
+            font-weight: 700;
             color: var(--blue);
             text-align: center;
-            padding: 20px;
+            padding: 18px;
             background: var(--bg);
             border-radius: 8px;
+            letter-spacing: 1px;
         }
 
-        .status-row { display: flex; gap: 12px; margin-top: 16px; }
+        .status-row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
         .status {
             flex: 1;
             background: var(--bg);
-            padding: 16px;
+            padding: 14px;
             border-radius: 8px;
             text-align: center;
+            font-size: 14px;
+            min-width: 120px;
         }
         .status-dot {
-            width: 10px;
-            height: 10px;
+            width: 10px; height: 10px;
             border-radius: 50%;
             display: inline-block;
-            margin-right: 8px;
+            margin-right: 7px;
         }
-        .status-dot.online { background: var(--green); }
-        .status-dot.offline { background: var(--red); }
+        .dot-online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .dot-offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+        .dot-checking { background: var(--yellow); }
 
-        .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-        
+        /* Metrics grid */
+        .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+        @media (max-width: 700px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
+
         .metric {
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 24px;
+            padding: 20px 16px;
             text-align: center;
         }
-
         .metric-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 36px;
+            font-size: 28px;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            line-height: 1;
         }
-
-        .metric-label { color: var(--text-dim); font-size: 14px; }
-        .metric.blue { border-top: 3px solid var(--blue); }
+        .metric-unit { font-size: 13px; font-weight: 400; opacity: 0.7; }
+        .metric-label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric.blue  { border-top: 3px solid var(--blue); }
         .metric.green { border-top: 3px solid var(--green); }
-        .metric.red { border-top: 3px solid var(--red); }
+        .metric.red   { border-top: 3px solid var(--red); }
+        .metric.yellow{ border-top: 3px solid var(--yellow); }
+        .metric.orange{ border-top: 3px solid var(--orange); }
 
+        .latency-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+        @media (max-width: 500px) { .latency-row { grid-template-columns: 1fr 1fr; } }
+
+        /* Ping graph */
+        .graph-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .graph-box h3 { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        #pingCanvas { width: 100%; height: 80px; display: block; }
+
+        /* Log */
         .log-box {
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 20px;
-            margin-top: 24px;
-            max-height: 300px;
-            overflow-y: auto;
         }
-        .log-box h3 { font-size: 14px; color: var(--text-dim); margin-bottom: 16px; }
-
+        .log-box h3 { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        #logEntries { max-height: 240px; overflow-y: auto; }
         .log-entry {
-            padding: 10px 14px;
+            padding: 9px 12px;
             background: var(--bg);
             border-radius: 6px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
+            font-size: 12px;
             border-left: 3px solid var(--green);
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
         }
-        .log-entry.alert { border-left-color: var(--red); }
-        .log-time { color: var(--text-dim); float: right; }
+        .log-entry.alert  { border-left-color: var(--red); }
+        .log-entry.warn   { border-left-color: var(--yellow); }
+        .log-time { color: var(--text-dim); white-space: nowrap; flex-shrink: 0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="server-box">
-            <h2>Servidor a Monitorear</h2>
-            <div class="input-group">
-                <input type="text" id="ipInput" placeholder="IP del servidor">
-                <input type="number" id="portInput" placeholder="Puerto">
-                <button class="btn" onclick="updateTarget()">Actualizar</button>
-            </div>
-            <div class="url-display" id="urlDisplay">Cargando...</div>
-            <div class="status-row">
-                <div class="status">
-                    <span class="status-dot online" id="connDot"></span>
-                    <span id="connStatus">Conectando...</span>
-                </div>
-                <div class="status">
-                    <span id="serverIp">IP: ---</span>
-                </div>
-                <div class="status">
-                    <span id="serverPort">Puerto: ---</span>
-                </div>
-            </div>
-        </div>
+<div class="container">
+    <h1>📡 Network Monitor</h1>
 
-        <div class="metrics">
-            <div class="metric blue">
-                <div class="metric-value" id="bandwidth">0.00 <span style="font-size:16px">Gbps</span></div>
-                <div class="metric-label">Ancho de Banda</div>
-            </div>
-            <div class="metric blue">
-                <div class="metric-value" id="rps">0 <span style="font-size:16px">req/s</span></div>
-                <div class="metric-label">Requests/seg</div>
-            </div>
-            <div class="metric green">
-                <div class="metric-value" id="uptime">00:00:00</div>
-                <div class="metric-label">Tiempo Activo</div>
-            </div>
-            <div class="metric red">
-                <div class="metric-value" id="attacks">0</div>
-                <div class="metric-label">Ataques Detectados</div>
-            </div>
+    <div class="server-box">
+        <h2>Objetivo a Monitorear</h2>
+        <div class="input-group">
+            <input type="text" id="ipInput" placeholder="IP o hostname">
+            <input type="number" id="portInput" placeholder="Puerto" style="max-width:120px">
+            <button class="btn" onclick="updateTarget()">Actualizar</button>
         </div>
-
-        <div class="log-box">
-            <h3>Registro en Tiempo Real</h3>
-            <div id="logEntries">
-                <div class="log-entry">Conectando al servidor...</div>
+        <div class="url-display" id="urlDisplay">---</div>
+        <div class="status-row">
+            <div class="status">
+                <span class="status-dot dot-checking" id="connDot"></span>
+                <span id="connStatus">Verificando...</span>
+            </div>
+            <div class="status" id="uptimePctBox">
+                Uptime: <strong id="uptimePct">--%</strong>
+            </div>
+            <div class="status">
+                Packet Loss: <strong id="packetLoss" style="color:var(--red)">--%</strong>
+            </div>
+            <div class="status">
+                Tiempo activo: <strong id="uptime">00:00:00</strong>
             </div>
         </div>
     </div>
 
-    <script>
-        let ws;
-        let ip = window.location.hostname;
-        let port = window.location.port || 80;
+    <!-- Main metrics -->
+    <div class="metrics">
+        <div class="metric blue">
+            <div class="metric-value" id="lastLatency">--<span class="metric-unit">ms</span></div>
+            <div class="metric-label">Latencia actual</div>
+        </div>
+        <div class="metric green">
+            <div class="metric-value" id="avgLatency">--<span class="metric-unit">ms</span></div>
+            <div class="metric-label">Latencia promedio</div>
+        </div>
+        <div class="metric yellow">
+            <div class="metric-value" id="minLatency">--<span class="metric-unit">ms</span></div>
+            <div class="metric-label">Latencia mínima</div>
+        </div>
+        <div class="metric red">
+            <div class="metric-value" id="maxLatency">--<span class="metric-unit">ms</span></div>
+            <div class="metric-label">Latencia máxima</div>
+        </div>
+    </div>
 
-        document.getElementById('ipInput').value = ip;
-        document.getElementById('portInput').value = port;
-        
-        function updateTarget() {
-            ip = document.getElementById('ipInput').value || window.location.hostname;
-            port = document.getElementById('portInput').value || 80;
-            document.getElementById('urlDisplay').textContent = `${ip}:${port}`;
-            document.getElementById('serverIp').textContent = `IP: ${ip}`;
-            document.getElementById('serverPort').textContent = `Puerto: ${port}`;
-            addLog(`Objetivo actualizado: ${ip}:${port}`);
+    <div class="metrics" style="grid-template-columns: repeat(3,1fr);">
+        <div class="metric orange">
+            <div class="metric-value" id="totalProbes">0</div>
+            <div class="metric-label">Total Probes</div>
+        </div>
+        <div class="metric green">
+            <div class="metric-value" id="successProbes">0</div>
+            <div class="metric-label">Exitosos</div>
+        </div>
+        <div class="metric red">
+            <div class="metric-value" id="failedProbes">0</div>
+            <div class="metric-label">Fallidos / Caídas</div>
+        </div>
+    </div>
+
+    <!-- Ping graph -->
+    <div class="graph-box">
+        <h3>Historial de Latencia (últimos 60 probes)</h3>
+        <canvas id="pingCanvas"></canvas>
+    </div>
+
+    <!-- Log -->
+    <div class="log-box">
+        <h3>Registro de Eventos</h3>
+        <div id="logEntries"></div>
+    </div>
+</div>
+
+<script>
+    let ws;
+    let lastStatus = null;
+    let lastDownEvents = 0;
+
+    function addLog(msg, type = 'normal') {
+        const div = document.createElement('div');
+        div.className = 'log-entry' + (type === 'alert' ? ' alert' : type === 'warn' ? ' warn' : '');
+        div.innerHTML = `<span>${msg}</span><span class="log-time">${new Date().toLocaleTimeString()}</span>`;
+        const c = document.getElementById('logEntries');
+        c.insertBefore(div, c.firstChild);
+        if (c.children.length > 30) c.removeChild(c.lastChild);
+    }
+
+    function updateTarget() {
+        const ip   = document.getElementById('ipInput').value.trim();
+        const port = document.getElementById('portInput').value.trim();
+        if (!ip || !port) return;
+
+        fetch('/api/target', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ip, port: parseInt(port) })
+        }).then(r => r.json()).then(data => {
+            document.getElementById('urlDisplay').textContent = `${data.target.ip}:${data.target.port}`;
+            addLog(`Objetivo actualizado → ${data.target.ip}:${data.target.port}`, 'warn');
+            lastStatus = null;
+        });
+    }
+
+    function drawPingGraph(history) {
+        const canvas = document.getElementById('pingCanvas');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width  = rect.width  * dpr;
+        canvas.height = 80 * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        const w = rect.width;
+        const h = 80;
+        ctx.clearRect(0, 0, w, h);
+
+        if (!history || history.length < 2) return;
+
+        const latencies = history.filter(p => p.ok && p.latency != null).map(p => p.latency);
+        const maxLat = latencies.length ? Math.max(...latencies, 50) : 50;
+
+        const barW = w / history.length;
+
+        history.forEach((p, i) => {
+            const x = i * barW;
+            if (!p.ok) {
+                ctx.fillStyle = 'rgba(248,81,73,0.6)';
+                ctx.fillRect(x, 0, barW - 1, h);
+            } else {
+                const barH = Math.max(3, (p.latency / maxLat) * (h - 6));
+                const pct = p.latency / maxLat;
+                const r = Math.round(63  + pct * (248 - 63));
+                const g = Math.round(185 + pct * (81  - 185));
+                const b = Math.round(80  + pct * (73  - 80));
+                ctx.fillStyle = `rgba(${r},${g},${b},0.85)`;
+                ctx.fillRect(x, h - barH, barW - 1, barH);
+            }
+        });
+    }
+
+    function updateUI(data) {
+        // URL display
+        if (data.target) {
+            document.getElementById('urlDisplay').textContent = `${data.target.ip}:${data.target.port}`;
+            document.getElementById('ipInput').value   = data.target.ip;
+            document.getElementById('portInput').value = data.target.port;
         }
 
-        function addLog(msg, isAlert = false) {
-            const div = document.createElement('div');
-            div.className = 'log-entry' + (isAlert ? ' alert' : '');
-            div.innerHTML = `<span class="log-time">${new Date().toLocaleTimeString()}</span>${msg}`;
-            const container = document.getElementById('logEntries');
-            container.insertBefore(div, container.firstChild);
-            if (container.children.length > 20) container.removeChild(container.lastChild);
+        // Status dot
+        const dot = document.getElementById('connDot');
+        const statusTxt = document.getElementById('connStatus');
+        if (data.status === 'online') {
+            dot.className = 'status-dot dot-online';
+            statusTxt.textContent = 'En línea';
+        } else if (data.status === 'offline') {
+            dot.className = 'status-dot dot-offline';
+            statusTxt.textContent = 'CAÍDO';
+        } else {
+            dot.className = 'status-dot dot-checking';
+            statusTxt.textContent = 'Verificando...';
         }
 
-        function connect() {
-            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            ws = new WebSocket(`${protocol}//${location.host}`);
+        // Log on state changes
+        if (lastStatus !== null && lastStatus !== data.status) {
+            if (data.status === 'offline') addLog('🔴 SERVIDOR CAÍDO — no responde', 'alert');
+            if (data.status === 'online')  addLog('🟢 Servidor volvió en línea', 'normal');
+        }
+        lastStatus = data.status;
 
-            ws.onopen = () => {
-                document.getElementById('connDot').className = 'status-dot online';
-                document.getElementById('connStatus').textContent = 'Conectado';
-                addLog('Conectado al servidor de monitoreo');
-                // Obtener IP numérica real del servidor
-                fetch('/api/info').then(r => r.json()).then(info => {
-                    ip = info.ip;
-                    port = info.port;
-                    document.getElementById('ipInput').value = ip;
-                    document.getElementById('portInput').value = port;
-                    document.getElementById('urlDisplay').textContent = `${ip}:${port}`;
-                    document.getElementById('serverIp').textContent = `IP: ${ip}`;
-                    document.getElementById('serverPort').textContent = `Puerto: ${port}`;
-                }).catch(() => {});
-            };
+        // Detect new down events mid-session
+        if (data.downEvents > lastDownEvents && lastDownEvents !== 0) {
+            addLog(`⚠️ Nueva caída detectada (total: ${data.downEvents})`, 'alert');
+        }
+        lastDownEvents = data.downEvents;
 
-            ws.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                document.getElementById('bandwidth').innerHTML = (data.bandwidth || 0).toFixed(4) + ' <span style="font-size:16px">Gbps</span>';
-                document.getElementById('rps').innerHTML = (data.requestRate || 0).toLocaleString() + ' <span style="font-size:16px">req/s</span>';
-                document.getElementById('uptime').textContent = data.uptimeFormatted || '00:00:00';
-                document.getElementById('attacks').textContent = data.attacksDetected || 0;
+        // Latency
+        document.getElementById('lastLatency').innerHTML = data.lastLatency != null
+            ? `${data.lastLatency}<span class="metric-unit">ms</span>`
+            : `--<span class="metric-unit">ms</span>`;
+        document.getElementById('avgLatency').innerHTML = data.avgLatency
+            ? `${data.avgLatency}<span class="metric-unit">ms</span>`
+            : `--<span class="metric-unit">ms</span>`;
+        document.getElementById('minLatency').innerHTML = data.minLatency != null
+            ? `${data.minLatency}<span class="metric-unit">ms</span>`
+            : `--<span class="metric-unit">ms</span>`;
+        document.getElementById('maxLatency').innerHTML = data.maxLatency
+            ? `${data.maxLatency}<span class="metric-unit">ms</span>`
+            : `--<span class="metric-unit">ms</span>`;
 
-                if (data.requestRate > 100) addLog(`⚠️ Alto tráfico detectado: ${data.requestRate} req/s`, true);
-            };
+        // Probe counts
+        document.getElementById('totalProbes').textContent   = data.totalProbes || 0;
+        document.getElementById('successProbes').textContent = data.successProbes || 0;
+        document.getElementById('failedProbes').textContent  = `${data.failedProbes || 0} / ${data.downEvents || 0}`;
 
-            ws.onclose = () => {
-                document.getElementById('connDot').className = 'status-dot offline';
-                document.getElementById('connStatus').textContent = 'Reconectando...';
-                setTimeout(connect, 3000);
-            };
+        // Uptime
+        document.getElementById('uptime').textContent    = data.uptimeFormatted || '00:00:00';
+        document.getElementById('uptimePct').textContent = `${data.uptimePct ?? '--'}%`;
+
+        // Packet loss color
+        const loss = data.packetLoss || 0;
+        const lossEl = document.getElementById('packetLoss');
+        lossEl.textContent = `${loss}%`;
+        lossEl.style.color = loss > 50 ? 'var(--red)' : loss > 10 ? 'var(--yellow)' : 'var(--green)';
+
+        // Alert on high latency
+        if (data.lastLatency != null && data.lastLatency > 500) {
+            addLog(`⚠️ Latencia alta: ${data.lastLatency}ms`, 'warn');
         }
 
-        connect();
-        updateTarget();
-    </script>
+        // Draw graph
+        if (data.pingHistory) drawPingGraph(data.pingHistory);
+    }
+
+    function connect() {
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${proto}//${location.host}`);
+
+        ws.onopen  = () => addLog('Conectado al monitor');
+        ws.onclose = () => { setTimeout(connect, 3000); };
+        ws.onmessage = (e) => updateUI(JSON.parse(e.data));
+    }
+
+    // Fetch initial info
+    fetch('/api/info').then(r => r.json()).then(info => {
+        document.getElementById('ipInput').value   = info.ip;
+        document.getElementById('portInput').value = info.port;
+        document.getElementById('urlDisplay').textContent = `${info.ip}:${info.port}`;
+    }).catch(() => {});
+
+    connect();
+</script>
 </body>
 </html>

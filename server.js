@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const https = require('https');
+const net = require('net');
 const WebSocket = require('ws');
 const path = require('path');
 const dns = require('dns');
@@ -12,19 +13,29 @@ const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 8080;
 
-let metrics = {
-    startTime: Date.now(),
-    requests: 0,
-    bytesIn: 0,
-    requestRate: 0,
-    attacksDetected: 0
-};
+// Target que se monitorea
+let target = { ip: '152.55.176.151', port: 443 };
 
-let lastRequestCount = 0;
+// Historial de pings (últimos 60 segundos)
+let pingHistory = [];
+let probeStats = {
+    startTime: Date.now(),
+    totalProbes: 0,
+    successProbes: 0,
+    failedProbes: 0,
+    lastLatency: null,
+    minLatency: Infinity,
+    maxLatency: 0,
+    avgLatency: 0,
+    latencySum: 0,
+    downEvents: 0,
+    wasDown: false,
+    currentStatus: 'checking', // 'online' | 'offline' | 'checking'
+};
 
 let serverIp = '0.0.0.0';
 
-// Resolver IP pública real del servidor
+// Resolver IP pública del servidor de monitoreo
 https.get('https://api.ipify.org', (res) => {
     let data = '';
     res.on('data', chunk => data += chunk);
@@ -35,51 +46,135 @@ https.get('https://api.ipify.org', (res) => {
     });
 });
 
+// Función para hacer un probe TCP al objetivo
+function probeTarget(ip, port, timeoutMs = 3000) {
+    return new Promise((resolve) => {
+        const start = Date.now();
+        const socket = new net.Socket();
 
+        socket.setTimeout(timeoutMs);
 
-// Contar requests
-app.use((req, res, next) => {
-    metrics.requests++;
-    const bodySize = req.body ? JSON.stringify(req.body).length : 0;
-    metrics.bytesIn += bodySize + req.url.length;
-    next();
-});
+        socket.connect(port, ip, () => {
+            const latency = Date.now() - start;
+            socket.destroy();
+            resolve({ success: true, latency });
+        });
+
+        socket.on('error', () => {
+            socket.destroy();
+            resolve({ success: false, latency: null });
+        });
+
+        socket.on('timeout', () => {
+            socket.destroy();
+            resolve({ success: false, latency: null });
+        });
+    });
+}
+
+// Loop de monitoreo: probe cada 500ms
+async function monitorLoop() {
+    while (true) {
+        const result = await probeTarget(target.ip, target.port);
+        const now = Date.now();
+
+        probeStats.totalProbes++;
+
+        if (result.success) {
+            probeStats.successProbes++;
+            probeStats.lastLatency = result.latency;
+            probeStats.latencySum += result.latency;
+            probeStats.avgLatency = Math.round(probeStats.latencySum / probeStats.successProbes);
+            if (result.latency < probeStats.minLatency) probeStats.minLatency = result.latency;
+            if (result.latency > probeStats.maxLatency) probeStats.maxLatency = result.latency;
+            probeStats.currentStatus = 'online';
+            probeStats.wasDown = false;
+
+            pingHistory.push({ t: now, latency: result.latency, ok: true });
+        } else {
+            probeStats.failedProbes++;
+            probeStats.lastLatency = null;
+            probeStats.currentStatus = 'offline';
+
+            if (!probeStats.wasDown) {
+                probeStats.downEvents++;
+                probeStats.wasDown = true;
+            }
+
+            pingHistory.push({ t: now, latency: null, ok: false });
+        }
+
+        // Mantener solo los últimos 120 pings (~60s a 500ms)
+        if (pingHistory.length > 120) pingHistory.shift();
+
+        await new Promise(r => setTimeout(r, 500));
+    }
+}
+
+monitorLoop();
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// API de métricas
+app.get('/api/info', (req, res) => res.json({ ip: target.ip, port: target.port }));
+
 app.get('/api/metrics', (req, res) => res.json(getMetrics()));
 
-// API de info del servidor
-app.get('/api/info', (req, res) => res.json({ ip: serverIp, port: 443 }));
+// Actualizar target via POST
+app.use(express.json());
+app.post('/api/target', (req, res) => {
+    const { ip, port } = req.body;
+    if (ip) target.ip = ip;
+    if (port) target.port = parseInt(port);
+    // Reset stats al cambiar objetivo
+    probeStats = {
+        startTime: Date.now(),
+        totalProbes: 0, successProbes: 0, failedProbes: 0,
+        lastLatency: null, minLatency: Infinity, maxLatency: 0,
+        avgLatency: 0, latencySum: 0, downEvents: 0,
+        wasDown: false, currentStatus: 'checking'
+    };
+    pingHistory = [];
+    res.json({ ok: true, target });
+});
 
-// WebSocket
+// WebSocket — push métricas cada segundo
 wss.on('connection', (ws) => {
     const interval = setInterval(() => {
-        metrics.requestRate = metrics.requests - lastRequestCount;
-        lastRequestCount = metrics.requests;
-        
-        if (metrics.requestRate > 100) metrics.attacksDetected++;
-        
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(getMetrics()));
         }
     }, 1000);
-
     ws.on('close', () => clearInterval(interval));
 });
 
 function getMetrics() {
-    const uptime = Math.floor((Date.now() - metrics.startTime) / 1000);
-    const seconds = (Date.now() - metrics.startTime) / 1000;
-    const gbps = ((metrics.bytesIn / seconds) * 8) / 1e9;
-    
+    const uptime = Math.floor((Date.now() - probeStats.startTime) / 1000);
+    const uptimePct = probeStats.totalProbes > 0
+        ? ((probeStats.successProbes / probeStats.totalProbes) * 100).toFixed(2)
+        : '0.00';
+
+    // Calcular packet loss en los últimos 20 pings
+    const recent = pingHistory.slice(-20);
+    const recentLoss = recent.length > 0
+        ? (((recent.filter(p => !p.ok).length) / recent.length) * 100).toFixed(0)
+        : 0;
+
     return {
+        target: target,
         uptime,
         uptimeFormatted: formatTime(uptime),
-        bandwidth: Math.min(gbps, 99.99),
-        requestRate: metrics.requestRate,
-        attacksDetected: metrics.attacksDetected
+        status: probeStats.currentStatus,
+        lastLatency: probeStats.lastLatency,
+        minLatency: probeStats.minLatency === Infinity ? null : probeStats.minLatency,
+        maxLatency: probeStats.maxLatency,
+        avgLatency: probeStats.avgLatency,
+        totalProbes: probeStats.totalProbes,
+        successProbes: probeStats.successProbes,
+        failedProbes: probeStats.failedProbes,
+        uptimePct: parseFloat(uptimePct),
+        packetLoss: parseInt(recentLoss),
+        downEvents: probeStats.downEvents,
+        pingHistory: pingHistory.slice(-60),
     };
 }
 
@@ -91,5 +186,6 @@ function formatTime(s) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Servidor corriendo en: http://0.0.0.0:${PORT}\n`);
+    console.log(`\n🚀 Monitor corriendo en: http://0.0.0.0:${PORT}\n`);
+    console.log(`📡 Monitoreando: ${target.ip}:${target.port}\n`);
 });
