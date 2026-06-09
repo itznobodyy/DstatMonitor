@@ -32,7 +32,6 @@ server.on('connection', (socket) => {
         bytesThisSecond += chunk.length;
     });
 });
-
 // IP pública real — resolver el dominio de Railway
 let publicIp = '...';
 
@@ -81,6 +80,26 @@ app.use((req, res, next) => {
     const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '?')
         .split(',')[0].trim();
     ipCount.set(ip, (ipCount.get(ip) || 0) + 1);
+
+    // Medir tamaño real: headers + content-length + URL
+    const headersSize = Object.entries(req.headers)
+        .reduce((acc, [k, v]) => acc + k.length + String(v).length + 4, 0);
+    const bodySize = parseInt(req.headers['content-length'] || 0);
+    const reqSize = headersSize + bodySize + req.url.length + 20;
+    totalBytes += reqSize;
+    bytesThisSecond += reqSize;
+
+    // También medir la respuesta
+    const origWrite = res.write.bind(res);
+    const origEnd = res.end.bind(res);
+    res.write = (chunk, ...args) => {
+        if (chunk) { const b = Buffer.byteLength(chunk); totalBytes += b; bytesThisSecond += b; }
+        return origWrite(chunk, ...args);
+    };
+    res.end = (chunk, ...args) => {
+        if (chunk) { const b = Buffer.byteLength(chunk); totalBytes += b; bytesThisSecond += b; }
+        return origEnd(chunk, ...args);
+    };
 
     next();
 });
