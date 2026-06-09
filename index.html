@@ -315,29 +315,34 @@
             ctx.fillText(formatBw(v / 8), PL - 4, y + 3.5);
         }
 
-        // Fill
+        const pts = history.length;
+        const sX  = gW / (pts - 1);
+
+        // Gradient fill
         const grad = ctx.createLinearGradient(0, PT, 0, PT + gH);
         grad.addColorStop(0, 'rgba(224,224,224,0.12)');
         grad.addColorStop(1, 'rgba(224,224,224,0)');
-        const pts = history.length;
-        const sX  = gW / (pts - 1);
+
+        // Line — smooth bezier curve
         ctx.beginPath();
         history.forEach((v, i) => {
             const x = PL + i * sX, y = PT + gH - (v / nice) * gH;
-            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                const px = PL + (i - 1) * sX;
+                const py = PT + gH - (history[i - 1] / nice) * gH;
+                const cpx = (px + x) / 2;
+                ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
+            }
         });
-        ctx.lineTo(PL + (pts - 1) * sX, PT + gH);
+        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke();
+
+        // Fill under smooth curve
+        ctx.lineTo(PL + (history.length - 1) * sX, PT + gH);
         ctx.lineTo(PL, PT + gH);
         ctx.closePath();
         ctx.fillStyle = grad; ctx.fill();
-
-        // Line
-        ctx.beginPath();
-        history.forEach((v, i) => {
-            const x = PL + i * sX, y = PT + gH - (v / nice) * gH;
-            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        });
-        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke();
 
         // X labels
         ctx.fillStyle = '#546e7a'; ctx.textAlign = 'center';
