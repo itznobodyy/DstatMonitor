@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -212,36 +212,36 @@
         <!-- Metrics -->
         <div class="metrics-grid">
             <div class="mc red">
-                <div class="mc-label">Requests/seg</div>
+                <div class="mc-label">Requests/sec</div>
                 <div class="mc-val" id="rpsVal">0 <span class="mc-unit">r/s</span></div>
-                <div class="mc-sub">Pico: <span id="peakRps">0</span></div>
+                <div class="mc-sub">Peak: <span id="peakRps">0</span></div>
             </div>
             <div class="mc blue">
                 <div class="mc-label">Bandwidth</div>
                 <div class="mc-val" id="gbpsVal">0.0000 <span class="mc-unit">Gbps</span></div>
-                <div class="mc-sub">Pico: <span id="peakGbps">0.0000</span></div>
+                <div class="mc-sub">Peak: <span id="peakGbps">0.0000</span></div>
             </div>
             <div class="mc yellow">
-                <div class="mc-label">IPs únicas</div>
+                <div class="mc-label">Unique IPs</div>
                 <div class="mc-val" id="uniqueIps">0</div>
-                <div class="mc-sub">atacantes</div>
+                <div class="mc-sub">attackers</div>
             </div>
             <div class="mc green">
                 <div class="mc-label">Total req</div>
                 <div class="mc-val" id="totalReq">0</div>
-                <div class="mc-sub">desde inicio</div>
+                <div class="mc-sub">since start</div>
             </div>
         </div>
 
         <!-- Top IPs -->
         <div class="section-card">
-            <div class="section-title">Top IPs atacantes</div>
-            <div id="topIpsList"><div style="color:var(--dim);font-size:12px;padding:4px 0">Sin tráfico aún...</div></div>
+            <div class="section-title">Top Attacking IPs</div>
+            <div id="topIpsList"><div style="color:var(--dim);font-size:12px;padding:4px 0">No traffic yet...</div></div>
         </div>
 
         <!-- Log -->
         <div class="section-card">
-            <div class="section-title">Registro de eventos</div>
+            <div class="section-title">Event Log</div>
             <div id="logEntries"></div>
         </div>
 
@@ -356,13 +356,13 @@
         ctx.fillStyle = '#546e7a'; ctx.textAlign = 'center';
         ctx.fillText('−120s', PL, H - 5);
         ctx.fillText('−60s',  PL + gW / 2, H - 5);
-        ctx.fillText('ahora', PL + gW, H - 5);
+        ctx.fillText('now', PL + gW, H - 5);
     }
 
     function renderTopIps(topIps) {
         const el = document.getElementById('topIpsList');
         if (!topIps || !topIps.length) {
-            el.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:4px 0">Sin tráfico aún...</div>';
+            el.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:4px 0">No traffic yet...</div>';
             return;
         }
         const max = topIps[0].count || 1;
@@ -382,12 +382,12 @@
         document.getElementById('uptimePill').textContent = d.uptimeFormatted || '00:00:00';
 
         const ap = document.getElementById('attackPill');
-        if (d.underAttack) { ap.className = 's-pill attack'; ap.textContent = '⚠ BAJO ATAQUE'; }
+        if (d.underAttack) { ap.className = 's-pill attack'; ap.textContent = '⚠ UNDER ATTACK'; }
         else               { ap.className = 's-pill';        ap.textContent = 'STANDBY'; }
 
-        if (d.underAttack && !wasAttack) addLog(`⚠ ATAQUE — ${d.currentRps} req/s`, 'alert');
-        if (!d.underAttack && wasAttack) addLog('✓ Tráfico normalizado', 'ok');
-        if (d.currentRps > 0 && lastRps === 0) addLog(`Tráfico: ${d.currentRps} req/s`, 'warn');
+        if (d.underAttack && !wasAttack) addLog(`⚠ ATTACK DETECTED — ${d.currentRps} req/s`, 'alert');
+        if (!d.underAttack && wasAttack) addLog('✓ Traffic normalized', 'ok');
+        if (d.currentRps > 0 && lastRps === 0) addLog(`Incoming traffic: ${d.currentRps} req/s`, 'warn');
         wasAttack = d.underAttack; lastRps = d.currentRps;
 
         document.getElementById('bwDisplay').textContent = formatBw(d.currentBps || 0);
@@ -407,8 +407,8 @@
     function connect() {
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${proto}//${location.host}`);
-        ws.onopen    = () => addLog('Monitor activo', 'ok');
-        ws.onclose   = () => { addLog('Reconectando...', 'warn'); setTimeout(connect, 3000); };
+        ws.onopen    = () => addLog('Monitor active and listening', 'ok');
+        ws.onclose   = () => { addLog('Reconnecting...', 'warn'); setTimeout(connect, 3000); };
         ws.onmessage = (e) => updateUI(JSON.parse(e.data));
     }
 
