@@ -104,24 +104,31 @@ app.use((req, res, next) => {
     next();
 });
 
-// Ticker cada 1 segundo — calcular métricas y notificar clientes WS
+// Ticker cada 100ms — métricas fluidas para el gráfico
+let tickCount = 0;
 setInterval(() => {
-    currentRps = reqThisSecond;
-    currentBps = bytesThisSecond;
-    if (currentRps > peakRps) peakRps = currentRps;
-    if (currentBps > peakBps) peakBps = currentBps;
+    tickCount++;
 
-    rpsHistory.push({ rps: currentRps, bps: currentBps, t: Date.now() });
-    if (rpsHistory.length > 60) rpsHistory.shift();
+    // Muestra instantánea de BW para el gráfico (suavizado)
+    const instantBps = bytesThisSecond * 10; // extrapolar a 1s
+    rpsHistory.push({ rps: reqThisSecond * 10, bps: instantBps, t: Date.now() });
+    if (rpsHistory.length > 600) rpsHistory.shift(); // 60s a 10fps
 
-    reqThisSecond = 0;
-    bytesThisSecond = 0;
+    // Cada 1 segundo calcular métricas reales
+    if (tickCount % 10 === 0) {
+        currentRps = reqThisSecond;
+        currentBps = bytesThisSecond;
+        if (currentRps > peakRps) peakRps = currentRps;
+        if (currentBps > peakBps) peakBps = currentBps;
+        reqThisSecond = 0;
+        bytesThisSecond = 0;
+    }
 
     const payload = JSON.stringify(getMetrics());
     wss.clients.forEach(ws => {
         if (ws.readyState === WebSocket.OPEN) ws.send(payload);
     });
-}, 1000);
+}, 100);
 
 // --- Rutas ---
 app.use('/img', express.static(path.join(__dirname, 'img')));
@@ -170,7 +177,7 @@ function getMetrics() {
         peakGbps,
         uniqueIps: ipCount.size,
         topIps,
-        rpsHistory: rpsHistory.slice(-60),
+        rpsHistory: rpsHistory.slice(-600),
         underAttack: currentRps > 50,
     };
 }

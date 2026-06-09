@@ -248,7 +248,9 @@
 
 <script>
     let ws, publicIp = '', wasAttack = false, lastRps = 0;
-    const BW_HISTORY = Array(120).fill(0);
+    const BW_HISTORY = Array(600).fill(0);
+    // Segunda línea ligeramente retrasada para efecto de profundidad
+    const BW_HISTORY2 = Array(600).fill(0);
 
     function addLog(msg, type = '') {
         const d = document.createElement('div');
@@ -283,7 +285,7 @@
         return n * Math.pow(10, e);
     }
 
-    function drawGraph(history) {
+    function drawGraph(history, history2) {
         const canvas = document.getElementById('mainGraph');
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
@@ -323,26 +325,39 @@
         grad.addColorStop(0, 'rgba(224,224,224,0.12)');
         grad.addColorStop(1, 'rgba(224,224,224,0)');
 
-        // Line — smooth bezier curve
+        // Line 1 — main
         ctx.beginPath();
         history.forEach((v, i) => {
             const x = PL + i * sX, y = PT + gH - (v / nice) * gH;
-            if (i === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                const px = PL + (i - 1) * sX;
-                const py = PT + gH - (history[i - 1] / nice) * gH;
+            if (i === 0) { ctx.moveTo(x, y); return; }
+            const px = PL + (i - 1) * sX, py = PT + gH - (history[i-1] / nice) * gH;
+            const cpx = (px + x) / 2;
+            ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
+        });
+        ctx.strokeStyle = 'rgba(210,210,210,0.9)'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke();
+
+        // Line 2 — shadow/depth line slightly behind
+        if (history2 && history2.length > 1) {
+            ctx.beginPath();
+            history2.forEach((v, i) => {
+                const x = PL + i * sX, y = PT + gH - (v / nice) * gH;
+                if (i === 0) { ctx.moveTo(x, y); return; }
+                const px = PL + (i - 1) * sX, py = PT + gH - (history2[i-1] / nice) * gH;
                 const cpx = (px + x) / 2;
                 ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
-            }
-        });
-        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke();
+            });
+            ctx.strokeStyle = 'rgba(150,150,150,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+        }
 
-        // Fill under smooth curve
-        ctx.lineTo(PL + (history.length - 1) * sX, PT + gH);
-        ctx.lineTo(PL, PT + gH);
-        ctx.closePath();
-        ctx.fillStyle = grad; ctx.fill();
+        // Fill under line 1
+        ctx.beginPath();
+        history.forEach((v, i) => {
+            const x = PL + i * sX, y = PT + gH - (v / nice) * gH;
+            if (i === 0) { ctx.moveTo(x, y); return; }
+            const px = PL + (i - 1) * sX, py = PT + gH - (history[i-1] / nice) * gH;
+            const cpx = (px + x) / 2;
+            ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
+        });
 
         // X labels
         ctx.fillStyle = '#546e7a'; ctx.textAlign = 'center';
@@ -391,8 +406,12 @@
         document.getElementById('totalReq').textContent  = d.totalRequests.toLocaleString();
 
         BW_HISTORY.push(d.currentBps || 0);
-        if (BW_HISTORY.length > 120) BW_HISTORY.shift();
-        drawGraph(BW_HISTORY);
+        if (BW_HISTORY.length > 600) BW_HISTORY.shift();
+        // Segunda línea: versión ligeramente suavizada para efecto profundidad
+        const last = BW_HISTORY2[BW_HISTORY2.length - 1] || 0;
+        BW_HISTORY2.push(last * 0.6 + (d.currentBps || 0) * 0.4);
+        if (BW_HISTORY2.length > 600) BW_HISTORY2.shift();
+        drawGraph(BW_HISTORY, BW_HISTORY2);
         renderTopIps(d.topIps);
     }
 
@@ -405,7 +424,7 @@
     }
 
     connect();
-    window.addEventListener('resize', () => drawGraph(BW_HISTORY));
+    window.addEventListener('resize', () => drawGraph(BW_HISTORY, BW_HISTORY2));
 </script>
 </body>
 </html>
