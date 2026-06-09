@@ -105,6 +105,7 @@ setInterval(() => {
 }, 1000);
 
 // --- Rutas ---
+app.use('/img', express.static(path.join(__dirname, 'img')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.get('/api/info', (req, res) => {
