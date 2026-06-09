@@ -15,21 +15,23 @@ const startTime = Date.now();
 let totalRequests = 0;
 let totalBytes = 0;
 
-// Requests por segundo — ventana deslizante de 1s
 let reqThisSecond = 0;
 let bytesThisSecond = 0;
 let currentRps = 0;
 let currentBps = 0;
 
-// Historial de RPS (últimos 60 segundos)
 const rpsHistory = [];
-
-// IPs únicas vistas
-const ipCount = new Map(); // ip -> count
-
-// Picos
+const ipCount = new Map();
 let peakRps = 0;
 let peakBps = 0;
+
+// Contar bytes a nivel de socket TCP — captura TODO el tráfico real
+server.on('connection', (socket) => {
+    socket.on('data', (chunk) => {
+        totalBytes += chunk.length;
+        bytesThisSecond += chunk.length;
+    });
+});
 
 // IP pública real — resolver el dominio de Railway
 let publicIp = '...';
@@ -69,25 +71,16 @@ resolvePublicIp();
 // Re-resolver cada 2 minutos por si Railway rota la IP
 setInterval(resolvePublicIp, 120000);
 
-// --- Middleware: contar todo el tráfico entrante ---
+// --- Middleware: contar requests e IPs ---
 app.use((req, res, next) => {
-    // Ignorar WebSocket upgrade y rutas internas
-    if (req.url === '/ws' || req.url === '/api/metrics') return next();
+    if (req.url === '/api/metrics') return next();
 
     totalRequests++;
     reqThisSecond++;
 
     const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '?')
         .split(',')[0].trim();
-
     ipCount.set(ip, (ipCount.get(ip) || 0) + 1);
-
-    // Estimar tamaño del request
-    const size = parseInt(req.headers['content-length'] || 0)
-        + (req.url.length)
-        + JSON.stringify(req.headers).length;
-    totalBytes += size;
-    bytesThisSecond += size;
 
     next();
 });
